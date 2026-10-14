@@ -372,3 +372,104 @@ func TestBudgetSecondsIsClampedUnderTheHostDeadline(t *testing.T) {
 		}
 	}
 }
+
+// S3-1, S3-2: every size setting overrides its own family only, 0 inherits.
+func TestSizeForUsesTheOverrideAndInheritsOtherwise(t *testing.T) {
+	c := Load(getterFrom(map[string]string{"mixSize": "40", "sizeLoved": "120", "sizeDecade": "0"}))
+	if got := c.SizeFor("loved"); got != 120 {
+		t.Errorf("loved = %d, want 120", got)
+	}
+	for _, k := range []string{"decade", "newmusic", "wrapped", "morning", "nonsense"} {
+		if got := c.SizeFor(k); got != 40 {
+			t.Errorf("%s = %d, want the global 40", k, got)
+		}
+	}
+}
+
+func TestEverySizeSettingMapsToItsFamily(t *testing.T) {
+	cases := map[string]string{
+		"sizeNewMusic": "newmusic", "sizeLoved": "loved", "sizeOnRepeat": "onrepeat",
+		"sizeEssentials": "essentials", "sizeDiscovery": "discovery",
+		"sizeRediscover": "rediscover", "sizeWrapped": "wrapped",
+		"sizeGenreRadio": "genreradio", "sizeArtistRadio": "artistradio",
+		"sizeDailyMix": "dailymix", "sizeDecade": "decade",
+	}
+	for field, key := range cases {
+		c := Load(getterFrom(map[string]string{field: "77"}))
+		if got := c.SizeFor(key); got != 77 {
+			t.Errorf("%s -> SizeFor(%q) = %d, want 77", field, key, got)
+		}
+		if got := c.SizeFor("essentials"); key != "essentials" && got != 30 {
+			t.Errorf("%s leaked into essentials: %d", field, got)
+		}
+	}
+}
+
+func TestOneTimeOfDaySizeCoversAllFourSlots(t *testing.T) {
+	c := Load(getterFrom(map[string]string{"sizeTimeOfDay": "55"}))
+	for _, k := range []string{"morning", "afternoon", "evening", "night"} {
+		if got := c.SizeFor(k); got != 55 {
+			t.Errorf("%s = %d, want 55", k, got)
+		}
+	}
+	if got := c.SizeFor("loved"); got != 30 {
+		t.Errorf("time of day size leaked into loved: %d", got)
+	}
+}
+
+func TestASmallSizeIsRaisedToTheMinimumAndTheMaximumIsKept(t *testing.T) {
+	c := Load(getterFrom(map[string]string{"sizeLoved": "3", "sizeOnRepeat": "9", "sizeDecade": "10", "sizeNewMusic": "200"}))
+	for k, want := range map[string]int{"loved": 10, "onrepeat": 10, "decade": 10, "newmusic": 200} {
+		if got := c.SizeFor(k); got != want {
+			t.Errorf("%s = %d, want %d", k, got, want)
+		}
+	}
+}
+
+// S3-4
+func TestBadSizeValuesFallBackToInheritAndNeverPanic(t *testing.T) {
+	for _, v := range []string{"abc", "-5", "201", "99999", "3.5", " ", "1e2", "999999999999999999999"} {
+		c := Load(getterFrom(map[string]string{"sizeLoved": v, "lovedMaxPerArtist": v}))
+		if got := c.SizeFor("loved"); got != 30 {
+			t.Errorf("sizeLoved=%q gave %d, want the global 30", v, got)
+		}
+		if v == "201" || v == "99999" {
+			continue
+		}
+		if got := c.MaxPerArtistFor("loved"); got != 3 {
+			t.Errorf("lovedMaxPerArtist=%q gave %d, want the global 3", v, got)
+		}
+	}
+}
+
+// S3-3
+func TestLovedMaxPerArtistReplacesTheCapForLovedOnly(t *testing.T) {
+	c := Load(getterFrom(map[string]string{"maxPerArtist": "2", "lovedMaxPerArtist": "500"}))
+	if got := c.MaxPerArtistFor("loved"); got != 500 {
+		t.Errorf("loved cap = %d, want 500", got)
+	}
+	for _, k := range []string{"newmusic", "onrepeat", "genreradio", "morning"} {
+		if got := c.MaxPerArtistFor(k); got != 2 {
+			t.Errorf("%s cap = %d, want the global 2", k, got)
+		}
+	}
+	if got := Load(getterFrom(map[string]string{"lovedMaxPerArtist": "1000"})).MaxPerArtistFor("loved"); got != 1000 {
+		t.Errorf("1000 = %d, want 1000", got)
+	}
+	if got := Load(getterFrom(map[string]string{"lovedMaxPerArtist": "1001"})).MaxPerArtistFor("loved"); got != 3 {
+		t.Errorf("1001 = %d, want the global 3", got)
+	}
+	if got := Load(getterFrom(map[string]string{"lovedMaxPerArtist": "0"})).MaxPerArtistFor("loved"); got != 3 {
+		t.Errorf("0 = %d, want the global 3", got)
+	}
+}
+
+// Nothing set: byte-identical behaviour to before the settings existed.
+func TestWithNoSizeSettingsEveryMixKeepsTheGlobals(t *testing.T) {
+	c := Load(getterFrom(nil))
+	for _, k := range []string{"loved", "morning", "wrapped", "rediscover"} {
+		if c.SizeFor(k) != 30 || c.MaxPerArtistFor(k) != 3 {
+			t.Errorf("%s changed without any new setting", k)
+		}
+	}
+}
