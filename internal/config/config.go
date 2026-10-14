@@ -598,9 +598,19 @@ func sizeOverride(raw string) int {
 // SizeFor is how many tracks the mix with this key should hold: its own
 // override when one is set, otherwise the global MixSize. Keys are the same
 // ones MixEnabled takes, so the four time-of-day slots share sizeTimeOfDay.
+//
+// The inherited global is clamped to MinMixSize..MaxMixSize like an override
+// is, so a hand edited mixSize of 5 or 500 cannot escape the bounds the
+// settings form documents.
 func (c Config) SizeFor(key string) int {
 	if n := c.MixSizes[sizeFamily(key)]; n > 0 {
 		return n
+	}
+	switch {
+	case c.MixSize < MinMixSize:
+		return MinMixSize
+	case c.MixSize > MaxMixSize:
+		return MaxMixSize
 	}
 	return c.MixSize
 }

@@ -512,3 +512,18 @@ func TestWithNoSizeSettingsEveryMixKeepsTheGlobals(t *testing.T) {
 		}
 	}
 }
+
+// F9: the inherited global size stays inside the documented 10..200 bounds,
+// and an override is unaffected.
+func TestSizeForClampsTheInheritedGlobal(t *testing.T) {
+	for _, tc := range []struct{ global, want int }{{5, MinMixSize}, {0, MinMixSize}, {500, MaxMixSize}, {30, 30}, {200, 200}, {10, 10}} {
+		c := Config{MixSize: tc.global}
+		if got := c.SizeFor("loved"); got != tc.want {
+			t.Errorf("MixSize %d: SizeFor = %d, want %d", tc.global, got, tc.want)
+		}
+	}
+	c := Config{MixSize: 500, MixSizes: map[string]int{"loved": 81}}
+	if got := c.SizeFor("loved"); got != 81 {
+		t.Errorf("override = %d, want 81", got)
+	}
+}
