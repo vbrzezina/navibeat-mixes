@@ -163,6 +163,54 @@ Your mixes appear within a minute of enabling it, and refresh at 04:00 daily.
 > `navidrome.toml` and filter the log for `plugin=navibeat-mixes`. Every run
 > says what it did, including when it found nothing to work with.
 
+## Stable identity and subject names
+
+**Playlists are found by what they are, not by what they are called.** Every
+playlist this plugin writes carries a machine line in its description
+(`nb1:<kind>:<slot>:...`), and the kind plus the slot is the identity of the
+mix. Each night the plugin looks for your playlist by that identity, among your
+own playlists only, and updates it.
+
+What that changes:
+
+- **Changing the prefix no longer creates a second set of playlists.** The
+  existing ones are renamed in place and keep their id, so pins and
+  server-side references survive.
+- **Playlists made by an older version are adopted.** If nothing carries the
+  marker yet, an exact name match is used, and from then on the playlist
+  carries the marker. No duplicate is created.
+- **If you already have duplicates** (for example from an earlier prefix
+  change), the most recently changed one is used and the others are left
+  alone. The plugin never deletes a playlist, so remove the leftovers yourself.
+- A rename that the server refuses is logged and skipped. The tracks and
+  description are still written, and the old name stays until the next run.
+
+**Name mixes after what is in them.** Artist Radio, Daily Mix, Genre Radio and
+the decade mixes each have one optional name template in the Names group. Each
+family has exactly one subject, so there is exactly one placeholder,
+`{subject}`:
+
+| Setting | Subject | Example template | Result |
+|---|---|---|---|
+| Name template: Artist Radio | the artist | `This is {subject}` | `This is Billy Talent` |
+| Name template: Daily Mix | the anchor artist | `{subject} Mix` | `Billy Talent Mix` |
+| Name template: Genre Radio | the genre | `{subject} Radio` | `Punk Radio` |
+| Name template: Decades | the decade | `{subject} Hits` | `1990s Hits` |
+
+- Empty (the default) keeps today's names: `Artist Radio 1`, `Daily Mix 2`,
+  `Genre Radio 3`, `1990s`.
+- The placeholder is case sensitive and may appear any number of times. All
+  other text is kept as written.
+- The result is cleaned: control characters are removed, runs of whitespace
+  become one space, and it is cut to 100 characters. The prefix is added
+  after, and is not counted. An empty result falls back to the default name.
+- Two mixes never share a name. If a name equals one already used earlier in
+  the same run, the later mix uses its numbered default instead.
+- The description is unchanged and still names the subject.
+- When the weekly rotation brings a new artist or genre into a slot, the
+  playlist is renamed in place. It is the same playlist with a new name, not a
+  new one.
+
 ## Configuration
 
 **Everything is a form field in Navidrome's own plugin settings.** No config
