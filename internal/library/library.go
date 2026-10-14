@@ -152,6 +152,11 @@ type Playlist struct {
 	Comment   string `json:"comment"`
 	Owner     string `json:"owner"`
 	SongCount int    `json:"songCount"`
+	// Changed and Created are the timestamps getPlaylists sends (Navidrome's
+	// buildPlaylist fills both). Changed is what picks the survivor when two
+	// playlists claim the same mix, see EnsureMix.
+	Changed string `json:"changed"`
+	Created string `json:"created"`
 }
 
 func (c *Client) do(endpoint string, params url.Values) (*envelope, error) {
@@ -343,18 +348,32 @@ func (c *Client) Playlists() ([]Playlist, error) {
 // Mixes are per user by design, so two people are supposed to end up with two
 // playlists of the same name. Only the owner may be handed back their own.
 func (c *Client) EnsurePlaylist(name string) (string, error) {
-	if c.playlists == nil {
-		existing, err := c.Playlists()
-		if err != nil {
-			return "", err
-		}
-		c.playlists = existing
+	if err := c.load(); err != nil {
+		return "", err
 	}
 	for _, p := range c.playlists {
 		if p.Name == name && p.Owner == c.user {
 			return p.ID, nil
 		}
 	}
+	return c.create(name)
+}
+
+// load fetches getPlaylists once per client and keeps it.
+func (c *Client) load() error {
+	if c.playlists != nil {
+		return nil
+	}
+	existing, err := c.Playlists()
+	if err != nil {
+		return err
+	}
+	c.playlists = existing
+	return nil
+}
+
+// create makes a new, non-public playlist and records it in the cache.
+func (c *Client) create(name string) (string, error) {
 	// Created non-public: these are personal mixes, and a server with five
 	// accounts should not show everyone five copies of "Morning".
 	env, err := c.do("createPlaylist", url.Values{"name": {name}})
@@ -377,11 +396,98 @@ func (c *Client) EnsurePlaylist(name string) (string, error) {
 		// could not be answered from a log: if a user reports seeing other
 		// people's mixes, this call failing is the first suspect and there was
 		// nothing written down to confirm or clear it.
-		if Logf != nil {
-			logf("could not make %s private: %v", name, err)
-		}
+		logf("could not make %s private: %v", name, err)
 	}
 	return id, nil
+}
+
+// EnsureMix finds this user's playlist for one mix and makes sure it carries
+// the given name, or creates it. The mix is identified by (kind, slot), the
+// pair in the machine line of the description, and NOT by its name.
+//
+// WHY: the name used to be the only key. Changing the prefix, or naming a mix
+// after its subject, therefore stopped the old playlist being found and a
+// second one was created next to it, orphaning the first. A playlist's id and
+// its marker survive a rename, so they are what a mix is looked up by now.
+//
+// Order of lookup, all of it among THIS user's playlists only:
+//
+//  1. The marker. If several playlists carry the same (kind, slot) the one
+//     changed most recently wins and the others are left exactly as they are:
+//     this plugin never deletes, and a duplicate is not ours to judge.
+//  2. An exact name match, for playlists written before the marker was
+//     trusted as identity. The playlist is then rewritten by the caller and
+//     carries the marker from then on. A playlist whose marker names a
+//     DIFFERENT mix is skipped here: it already has an identity, and taking it
+//     because the names happen to be equal would steal it from its own slot.
+//  3. Nothing found: create it.
+//
+// When the stored name is not the wanted name the playlist is renamed in
+// place (updatePlaylist, parameter name), so the id never changes. A failed
+// rename is logged and does not fail the write: the tracks and description
+// still go in and the old name stays until the next run.
+//
+// ⛔ THE OWNER CHECK IS LOAD BEARING, exactly as in EnsurePlaylist and
+// FindControl: an admin's getPlaylists holds every user's playlists, and a
+// marker is identical across users. Matching without the owner would rename
+// and overwrite somebody else's mix.
+func (c *Client) EnsureMix(kind, slot, name string) (string, error) {
+	if err := c.load(); err != nil {
+		return "", err
+	}
+	idx := c.findByMarker(kind, slot)
+	if idx < 0 {
+		for i, p := range c.playlists {
+			if p.Owner != c.user || p.Name != name {
+				continue
+			}
+			if meta, ok := protocol.Parse(p.Comment); ok && (meta.Kind != kind || meta.Slot != slot) {
+				continue
+			}
+			idx = i
+			break
+		}
+	}
+	if idx < 0 {
+		return c.create(name)
+	}
+	p := c.playlists[idx]
+	if p.Name != name {
+		if _, err := c.do("updatePlaylist", url.Values{
+			"playlistId": {p.ID}, "name": {name},
+		}); err != nil {
+			logf("could not rename %q to %q: %v", p.Name, name, err)
+		} else {
+			c.playlists[idx].Name = name
+		}
+	}
+	return p.ID, nil
+}
+
+// findByMarker returns the index in c.playlists of this user's playlist for
+// (kind, slot), the most recently changed when there are several, or -1.
+func (c *Client) findByMarker(kind, slot string) int {
+	best := -1
+	var bestAt time.Time
+	for i, p := range c.playlists {
+		if p.Owner != c.user {
+			continue
+		}
+		meta, ok := protocol.Parse(p.Comment)
+		if !ok || meta.Kind != kind || meta.Slot != slot {
+			continue
+		}
+		at := parseTime(p.Changed)
+		if at.IsZero() {
+			at = parseTime(p.Created)
+		}
+		// Strictly newer wins, so on a tie the first listed is kept and the
+		// answer does not depend on anything but the server's order.
+		if best < 0 || at.After(bestAt) {
+			best, bestAt = i, at
+		}
+	}
+	return best
 }
 
 // FindControl picks THIS user's control mailbox out of what the server
@@ -484,6 +590,15 @@ func (c *Client) SetComment(playlistID, comment string) error {
 	_, err := c.do("updatePlaylist", url.Values{
 		"playlistId": {playlistID}, "comment": {comment},
 	})
+	if err == nil {
+		// Keep the cache honest: the marker just written is what EnsureMix
+		// looks a mix up by.
+		for i := range c.playlists {
+			if c.playlists[i].ID == playlistID {
+				c.playlists[i].Comment = comment
+			}
+		}
+	}
 	return err
 }
 
