@@ -11,6 +11,7 @@
 package naming
 
 import (
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -91,6 +92,13 @@ type Item struct {
 // uses its default instead. The plan order is fixed, so the same library
 // always resolves the same way and a playlist does not flip names night to
 // night.
+//
+// The default can be taken too: by a fixed-name mix (a genre literally called
+// "Morning" against the time-of-day mix of that name) or by a template that
+// renders exactly another mix's default ("Daily Mix 1"). Then " (2)", " (3)"
+// and so on is appended to the default until the name is free. The suffix is
+// added to the finished name, after the 100 character cut and the prefix, so
+// it can never be cut off.
 func ResolveCollisions(items []Item) []string {
 	taken := make(map[string]bool, len(items))
 	out := make([]string, len(items))
@@ -98,9 +106,42 @@ func ResolveCollisions(items []Item) []string {
 		name := it.Name
 		if taken[name] {
 			name = it.Default
+			for n := 2; taken[name]; n++ {
+				name = it.Default + " (" + strconv.Itoa(n) + ")"
+			}
 		}
 		taken[name] = true
 		out[i] = name
 	}
 	return out
+}
+
+// Subject makes a tag value (an artist, a genre) safe to put into a playlist
+// name or into the sentence of a description: control characters and line
+// breaks become single spaces, and it is cut to MaxLen characters.
+//
+// ⛔ THE LINE BREAK IS THE POINT. The description is a human sentence, a
+// newline, and the machine line, and protocol.Parse takes the FIRST line that
+// starts with "nb1:". An artist tag containing "\nnb1:a:b:c:d:1" would put a
+// bogus machine line ahead of the real one, so the mix could never be found
+// again and a duplicate would be created on every run. Tags are written by
+// whoever tagged the file, so they are untrusted text.
+func Subject(s string) string { return Clean(s) }
+
+// Sentence is the human line of the description of a mix named after a
+// subject. kind is the mix family; subject is cleaned here, so a caller cannot
+// forget to. An unknown kind gives just the cleaned subject.
+func Sentence(kind, subject string) string {
+	s := Subject(subject)
+	switch kind {
+	case "genreradio":
+		return "NaviBeat Mixes: " + s + ", one of the genres you play most. A different genre each week."
+	case "artistradio":
+		return "NaviBeat Mixes: everything you have by " + s + ". A different artist each week."
+	case "dailymix":
+		return "NaviBeat Mixes: built around " + s + " and what sits near it. Rotates weekly."
+	case "decade":
+		return "NaviBeat Mixes: your " + s + ", ranked by what you actually play. Rotates weekly."
+	}
+	return s
 }

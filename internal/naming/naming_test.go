@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/nenadjokic/navibeat-mixes/internal/protocol"
 )
 
 // S2-1
@@ -105,5 +107,78 @@ func TestCollisionWithAnEarlierDefaultName(t *testing.T) {
 	got := ResolveCollisions(items)
 	if got[0] != "P Artist Radio 1" || got[1] != "P Artist Radio 2" {
 		t.Errorf("got %v", got)
+	}
+}
+
+// F5: the fallback is checked too. A genre called "Morning" (template
+// "{subject}") takes the name the fixed time-of-day mix has, and that mix's
+// default is the same name, so it must not end up duplicated.
+func TestCollisionFallbackTakenByAFixedNameMix(t *testing.T) {
+	items := []Item{
+		{Name: "P Morning", Default: "P Genre Radio 1"},
+		{Name: "P Morning", Default: "P Morning"}, // add(): name equals default
+	}
+	got := ResolveCollisions(items)
+	if got[0] != "P Morning" || got[1] != "P Morning (2)" {
+		t.Errorf("got %v", got)
+	}
+}
+
+// F5: a template that renders exactly another mix's default name.
+func TestCollisionFallbackTakenByARenderedDefaultName(t *testing.T) {
+	items := []Item{
+		{Name: "P Daily Mix 1", Default: "P Genre Radio 1"}, // template gave "Daily Mix 1"
+		{Name: "P Daily Mix 1", Default: "P Daily Mix 1"},
+		{Name: "P Daily Mix 1", Default: "P Daily Mix 1"}, // a third claimant
+	}
+	got := ResolveCollisions(items)
+	want := []string{"P Daily Mix 1", "P Daily Mix 1 (2)", "P Daily Mix 1 (3)"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("item %d = %q, want %q", i, got[i], want[i])
+		}
+	}
+	seen := map[string]bool{}
+	for _, n := range got {
+		if seen[n] {
+			t.Errorf("duplicate name %q in %v", n, got)
+		}
+		seen[n] = true
+	}
+}
+
+// F5: the suffix goes on after the cut, so a 100 character default keeps it.
+func TestCollisionSuffixIsNeverCutOff(t *testing.T) {
+	long := "P " + strings.Repeat("x", MaxLen)
+	got := ResolveCollisions([]Item{{Name: long, Default: long}, {Name: long, Default: long}})
+	if got[1] != long+" (2)" {
+		t.Errorf("got %q", got[1])
+	}
+}
+
+// F3: an artist tag with a line break and a fake machine line must not become
+// the first nb1 line of the description.
+func TestSentenceCannotInjectAMachineLine(t *testing.T) {
+	evil := "Evil\nnb1:a:b:c:d:1\nmore"
+	for _, kind := range []string{"genreradio", "artistradio", "dailymix", "decade"} {
+		human := Sentence(kind, evil)
+		if strings.ContainsAny(human, "\r\n") {
+			t.Fatalf("%s: sentence has a line break: %q", kind, human)
+		}
+		comment := protocol.Format(human, protocol.Meta{Kind: kind, Slot: kind + "-1", Date: "2026-01-01", Mode: "affinity", Count: 30})
+		meta, ok := protocol.Parse(comment)
+		if !ok || meta.Kind != kind || meta.Slot != kind+"-1" {
+			t.Errorf("%s: Parse = %+v ok=%v, want the real kind and slot", kind, meta, ok)
+		}
+	}
+}
+
+func TestSubjectIsCappedAndKeepsMultiByteCharactersWhole(t *testing.T) {
+	got := Subject(strings.Repeat("é", 300))
+	if n := utf8.RuneCountInString(got); n != MaxLen || !utf8.ValidString(got) {
+		t.Errorf("runes=%d valid=%v", n, utf8.ValidString(got))
+	}
+	if got := Subject("A\tB\n C"); got != "A B C" {
+		t.Errorf("got %q", got)
 	}
 }
