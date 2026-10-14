@@ -606,6 +606,44 @@ func logf(format string, args ...any) {
 	}
 }
 
+// WriteMix writes the tracks and the description (which holds the marker) of
+// a mix whose playlist EnsureMix returned.
+//
+// ORDER DEPENDS ON created, and that is the point of the flag. The marker is
+// how a mix is found again, and the description is the only place it lives. A
+// playlist that was just created has no marker yet, and with a name template
+// it has a name no adoption rule will ever match, so if the run stopped after
+// the tracks but before the description, the next run would create a SECOND
+// playlist and the first would be orphaned for good. So for a created
+// playlist the description goes in FIRST (createPlaylist with playlistId, used
+// by ReplaceTracks, keeps the stored comment), and if it cannot be written
+// the error is returned so the caller treats the slot as failed and retries.
+// One immediate retry covers a transient failure without a second pass.
+//
+// An existing playlist already has its marker, so there the order stays
+// tracks first, then description, and a description that fails to write is
+// only logged: rewriting the same tracks next pass to fix a sentence costs
+// more than the stale sentence is worth.
+func (c *Client) WriteMix(id string, created bool, trackIDs []string, comment string) error {
+	if created {
+		err := c.SetComment(id, comment)
+		if err != nil {
+			err = c.SetComment(id, comment)
+		}
+		if err != nil {
+			return fmt.Errorf("writing description of new playlist %s: %w", id, err)
+		}
+		return c.ReplaceTracks(id, trackIDs)
+	}
+	if err := c.ReplaceTracks(id, trackIDs); err != nil {
+		return err
+	}
+	if err := c.SetComment(id, comment); err != nil {
+		logf("writing description of %s: %v", id, err)
+	}
+	return nil
+}
+
 // ReplaceTracks sets a playlist's contents to exactly the given ids.
 //
 // It uses createPlaylist with playlistId, which Navidrome treats as "replace

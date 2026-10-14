@@ -802,14 +802,9 @@ func writeNamed(client *library.Client, cfg config.Config, name, legacy string, 
 	// Found by the (kind, slot) marker, not by name, so a changed prefix or a
 	// subject template renames the playlist in place instead of creating a
 	// second one beside it.
-	id, _, err := client.EnsureMix(kind, string(sel.Slot), name, legacy)
+	id, created, err := client.EnsureMix(kind, string(sel.Slot), name, legacy)
 	if err != nil {
 		logf("user %s: %v", username, err)
-		return writeFailed
-	}
-
-	if err := client.ReplaceTracks(id, sel.TrackIDs); err != nil {
-		logf("user %s: writing tracks: %v", username, err)
 		return writeFailed
 	}
 
@@ -859,11 +854,12 @@ func writeNamed(client *library.Client, cfg config.Config, name, legacy string, 
 			Glyph: icon, Color: colour, Label: label,
 		}))
 	}
-	if err := client.SetComment(id, comment); err != nil {
-		// The tracks are already in the playlist, so this IS a write. Failing
-		// the slot here would rewrite the same tracks on the next pass to fix
-		// a description, which costs more than the missing line is worth.
-		logf("user %s: writing description: %v", username, err)
+	// WriteMix puts the description (the marker) before the tracks for a
+	// playlist that was just created, and fails the slot if it cannot, so a
+	// retry finds this playlist instead of creating a second one.
+	if err := client.WriteMix(id, created, sel.TrackIDs, comment); err != nil {
+		logf("user %s: writing %s: %v", username, name, err)
+		return writeFailed
 	}
 	return writeOK
 }
