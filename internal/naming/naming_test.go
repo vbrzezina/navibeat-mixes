@@ -107,3 +107,49 @@ func TestCollisionWithAnEarlierDefaultName(t *testing.T) {
 		t.Errorf("got %v", got)
 	}
 }
+
+// F5: the fallback is checked too. A genre called "Morning" (template
+// "{subject}") takes the name the fixed time-of-day mix has, and that mix's
+// default is the same name, so it must not end up duplicated.
+func TestCollisionFallbackTakenByAFixedNameMix(t *testing.T) {
+	items := []Item{
+		{Name: "P Morning", Default: "P Genre Radio 1"},
+		{Name: "P Morning", Default: "P Morning"}, // add(): name equals default
+	}
+	got := ResolveCollisions(items)
+	if got[0] != "P Morning" || got[1] != "P Morning (2)" {
+		t.Errorf("got %v", got)
+	}
+}
+
+// F5: a template that renders exactly another mix's default name.
+func TestCollisionFallbackTakenByARenderedDefaultName(t *testing.T) {
+	items := []Item{
+		{Name: "P Daily Mix 1", Default: "P Genre Radio 1"}, // template gave "Daily Mix 1"
+		{Name: "P Daily Mix 1", Default: "P Daily Mix 1"},
+		{Name: "P Daily Mix 1", Default: "P Daily Mix 1"}, // a third claimant
+	}
+	got := ResolveCollisions(items)
+	want := []string{"P Daily Mix 1", "P Daily Mix 1 (2)", "P Daily Mix 1 (3)"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("item %d = %q, want %q", i, got[i], want[i])
+		}
+	}
+	seen := map[string]bool{}
+	for _, n := range got {
+		if seen[n] {
+			t.Errorf("duplicate name %q in %v", n, got)
+		}
+		seen[n] = true
+	}
+}
+
+// F5: the suffix goes on after the cut, so a 100 character default keeps it.
+func TestCollisionSuffixIsNeverCutOff(t *testing.T) {
+	long := "P " + strings.Repeat("x", MaxLen)
+	got := ResolveCollisions([]Item{{Name: long, Default: long}, {Name: long, Default: long}})
+	if got[1] != long+" (2)" {
+		t.Errorf("got %q", got[1])
+	}
+}

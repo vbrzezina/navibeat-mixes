@@ -11,6 +11,7 @@
 package naming
 
 import (
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -91,6 +92,13 @@ type Item struct {
 // uses its default instead. The plan order is fixed, so the same library
 // always resolves the same way and a playlist does not flip names night to
 // night.
+//
+// The default can be taken too: by a fixed-name mix (a genre literally called
+// "Morning" against the time-of-day mix of that name) or by a template that
+// renders exactly another mix's default ("Daily Mix 1"). Then " (2)", " (3)"
+// and so on is appended to the default until the name is free. The suffix is
+// added to the finished name, after the 100 character cut and the prefix, so
+// it can never be cut off.
 func ResolveCollisions(items []Item) []string {
 	taken := make(map[string]bool, len(items))
 	out := make([]string, len(items))
@@ -98,6 +106,9 @@ func ResolveCollisions(items []Item) []string {
 		name := it.Name
 		if taken[name] {
 			name = it.Default
+			for n := 2; taken[name]; n++ {
+				name = it.Default + " (" + strconv.Itoa(n) + ")"
+			}
 		}
 		taken[name] = true
 		out[i] = name
