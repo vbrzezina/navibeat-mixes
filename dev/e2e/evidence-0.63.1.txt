@@ -1,0 +1,196 @@
+=== Navidrome 0.63.1
+server: 0.63.1 (052f10fd)
+tracks: 192 artists: 16
+cleared startup playlists, remaining: 0
+seeded plays for 16 artists
+hand made (legacy): {'🟠 Daily Mix 2': 'AyjpL8g4WYIJNrIK8Ru8Nv', '🟠 Artist Radio 1': 'AVOOw69KUM0sXUCJxjidr7', '🟠 New Music': 'g10noimkfTctuOERNQWSN3'} | hand made (must survive): jzHs0Uw0fKPbUFqUZtC0NA
+--- baseline (22 playlists of admin)
+   AVOOw69KUM0sXUCJxjidr7 n= 12 '🟠 Artist Radio 1' artistradio:artistradio-1
+   2UOlR5u9sfHgyvEDW28NwX n= 12 '🟠 Artist Radio 2' artistradio:artistradio-2
+   yHjhg5RFBwfsqcZWaj5hTp n= 12 '🟠 Artist Radio 3' artistradio:artistradio-3
+   oZ6Af7hhZb6Dl1NQLwhzc5 n= 12 '🟠 Artist Radio 4' artistradio:artistradio-4
+   DR1zrPmFRMQWc4UPdwKyY3 n= 12 '🟠 Artist Radio 5' artistradio:artistradio-5
+   1Y0SGNKDGob6HjuM8cLV0y n= 21 '🟠 Daily Mix 1' dailymix:dailymix-1
+   AyjpL8g4WYIJNrIK8Ru8Nv n= 21 '🟠 Daily Mix 2' dailymix:dailymix-2
+   A3jKdjOFMjSZxKt9OHl1Mk n= 21 '🟠 Daily Mix 3' dailymix:dailymix-3
+   5IVXxXlo2Sj2rhCaR0S9Gq n= 24 '🟠 1990s' decade:decade-1990
+   8g8jbyTxnTdZDAwjplt7D3 n= 12 '🟠 2010s' decade:decade-2010
+   wMMV8Ugwpv6GoyER7ZRard n= 30 '🟠 Your Essentials' essentials:essentials
+   4BAyTf3AzibL928HvJvRbv n= 12 '🟠 Genre Radio 1' genreradio:genreradio-1
+   DfnKuIDUj4bh8Im9DuSAwc n= 12 '🟠 Genre Radio 2' genreradio:genreradio-2
+   qcZRWQwJnmAaqZCd5Ddixx n= 12 '🟠 Genre Radio 3' genreradio:genreradio-3
+   g10noimkfTctuOERNQWSN3 n= 30 '🟠 New Music' newmusic:newmusic
+   7ZrhfnJNQ6ZsQCstPClCd2 n= 30 '🟠 On Repeat' onrepeat:onrepeat
+   a9DeyrGgnmyO9W52Ut0Pz4 n= 30 '🟠 Afternoon' timeofday:afternoon
+   pIyMoUVU6Cie72VRtBxLwB n= 30 '🟠 Evening' timeofday:evening
+   gLYcttFQOXrEdWmo5RYgcI n= 30 '🟠 Morning' timeofday:morning
+   rZaSmnYjzQNh3SH7sC2G5z n= 30 '🟠 Night' timeofday:night
+   RJoWj5LTtunmiAeNvKmDB7 n= 30 '🟠 Wrapped 2026' wrapped:wrapped-2026
+   jzHs0Uw0fKPbUFqUZtC0NA n=  3 'QA Punk Radio' None
+[PASS] S1-baseline: 22 playlists
+[PASS] S1-2 legacy adoption: adopted={'🟠 Daily Mix 2': 'dailymix:dailymix-2', '🟠 Artist Radio 1': 'artistradio:artistradio-1', '🟠 New Music': 'newmusic:newmusic'} duplicate names=[]
+--- after prefix=QA (22 playlists of admin)
+   AVOOw69KUM0sXUCJxjidr7 n= 12 'QA Artist Radio 1' artistradio:artistradio-1
+   2UOlR5u9sfHgyvEDW28NwX n= 12 'QA Artist Radio 2' artistradio:artistradio-2
+   yHjhg5RFBwfsqcZWaj5hTp n= 12 'QA Artist Radio 3' artistradio:artistradio-3
+   oZ6Af7hhZb6Dl1NQLwhzc5 n= 12 'QA Artist Radio 4' artistradio:artistradio-4
+   DR1zrPmFRMQWc4UPdwKyY3 n= 12 'QA Artist Radio 5' artistradio:artistradio-5
+   1Y0SGNKDGob6HjuM8cLV0y n= 21 'QA Daily Mix 1' dailymix:dailymix-1
+   AyjpL8g4WYIJNrIK8Ru8Nv n= 21 'QA Daily Mix 2' dailymix:dailymix-2
+   A3jKdjOFMjSZxKt9OHl1Mk n= 21 'QA Daily Mix 3' dailymix:dailymix-3
+   5IVXxXlo2Sj2rhCaR0S9Gq n= 24 'QA 1990s' decade:decade-1990
+   8g8jbyTxnTdZDAwjplt7D3 n= 12 'QA 2010s' decade:decade-2010
+   wMMV8Ugwpv6GoyER7ZRard n= 30 'QA Your Essentials' essentials:essentials
+   4BAyTf3AzibL928HvJvRbv n= 12 'QA Genre Radio 1' genreradio:genreradio-1
+   DfnKuIDUj4bh8Im9DuSAwc n= 12 'QA Genre Radio 2' genreradio:genreradio-2
+   qcZRWQwJnmAaqZCd5Ddixx n= 12 'QA Genre Radio 3' genreradio:genreradio-3
+   g10noimkfTctuOERNQWSN3 n= 30 'QA New Music' newmusic:newmusic
+   7ZrhfnJNQ6ZsQCstPClCd2 n= 30 'QA On Repeat' onrepeat:onrepeat
+   a9DeyrGgnmyO9W52Ut0Pz4 n= 30 'QA Afternoon' timeofday:afternoon
+   pIyMoUVU6Cie72VRtBxLwB n= 30 'QA Evening' timeofday:evening
+   gLYcttFQOXrEdWmo5RYgcI n= 30 'QA Morning' timeofday:morning
+   rZaSmnYjzQNh3SH7sC2G5z n= 30 'QA Night' timeofday:night
+   RJoWj5LTtunmiAeNvKmDB7 n= 30 'QA Wrapped 2026' wrapped:wrapped-2026
+   jzHs0Uw0fKPbUFqUZtC0NA n=  3 'QA Punk Radio' None
+[PASS] S1-1/S1-3 prefix change keeps ids: before=21 after=21 same=True extra=set() missing=set()
+[PASS] S1-3 renamed in place: 21/21 now start with 'QA '
+--- templates (22 playlists of admin)
+   AVOOw69KUM0sXUCJxjidr7 n= 12 'QA This is Zed Zero' artistradio:artistradio-1
+   2UOlR5u9sfHgyvEDW28NwX n= 12 'QA This is Billy Talent' artistradio:artistradio-2
+   yHjhg5RFBwfsqcZWaj5hTp n= 12 'QA This is Blue Quartet' artistradio:artistradio-3
+   oZ6Af7hhZb6Dl1NQLwhzc5 n= 12 'QA This is Café Tacvba' artistradio:artistradio-4
+   DR1zrPmFRMQWc4UPdwKyY3 n= 12 'QA This is Coda Sextet' artistradio:artistradio-5
+   1Y0SGNKDGob6HjuM8cLV0y n= 21 'QA Zed Zero Mix' dailymix:dailymix-1
+   AyjpL8g4WYIJNrIK8Ru8Nv n= 21 'QA Billy Talent Mix' dailymix:dailymix-2
+   A3jKdjOFMjSZxKt9OHl1Mk n= 21 'QA Blue Quartet Mix' dailymix:dailymix-3
+   5IVXxXlo2Sj2rhCaR0S9Gq n= 24 'QA 1990s Hits' decade:decade-1990
+   8g8jbyTxnTdZDAwjplt7D3 n= 12 'QA 2010s Hits' decade:decade-2010
+   wMMV8Ugwpv6GoyER7ZRard n= 30 'QA Your Essentials' essentials:essentials
+   4BAyTf3AzibL928HvJvRbv n= 12 'QA Pop Radio' genreradio:genreradio-1
+   DfnKuIDUj4bh8Im9DuSAwc n= 12 'QA Punk Radio' genreradio:genreradio-2
+   qcZRWQwJnmAaqZCd5Ddixx n= 12 'QA Rock Radio' genreradio:genreradio-3
+   g10noimkfTctuOERNQWSN3 n= 30 'QA New Music' newmusic:newmusic
+   7ZrhfnJNQ6ZsQCstPClCd2 n= 30 'QA On Repeat' onrepeat:onrepeat
+   a9DeyrGgnmyO9W52Ut0Pz4 n= 30 'QA Afternoon' timeofday:afternoon
+   pIyMoUVU6Cie72VRtBxLwB n= 30 'QA Evening' timeofday:evening
+   gLYcttFQOXrEdWmo5RYgcI n= 30 'QA Morning' timeofday:morning
+   rZaSmnYjzQNh3SH7sC2G5z n= 30 'QA Night' timeofday:night
+   RJoWj5LTtunmiAeNvKmDB7 n= 30 'QA Wrapped 2026' wrapped:wrapped-2026
+   jzHs0Uw0fKPbUFqUZtC0NA n=  3 'QA Punk Radio' None
+[PASS] S1-3 ids unchanged by templates: same=True
+[PASS] S2-2 artist radio name from subject: 'QA This is Zed Zero' subject='Zed Zero'
+[PASS] S2-2 genre radio name: 'QA Pop Radio' genre='Pop'
+[PASS] S2-2 decade name: 'QA 1990s Hits'
+[PASS] S2-6 description keeps the subject: NaviBeat Mixes: everything you have by Zed Zero. A different artist each week.
+[PASS] S2-1 untemplated mixes keep default names: 'QA New Music'
+[PASS] F1 hand-made playlist not adopted: ('QA Punk Radio', 3, None)
+[PASS] F1 plugin made its own playlist next to it: 'QA Punk Radio' count 2
+--- collision (22 playlists of admin)
+   AVOOw69KUM0sXUCJxjidr7 n= 12 'QA This is Zed Zero' artistradio:artistradio-1
+   2UOlR5u9sfHgyvEDW28NwX n= 12 'QA This is Billy Talent' artistradio:artistradio-2
+   yHjhg5RFBwfsqcZWaj5hTp n= 12 'QA This is Blue Quartet' artistradio:artistradio-3
+   oZ6Af7hhZb6Dl1NQLwhzc5 n= 12 'QA This is Café Tacvba' artistradio:artistradio-4
+   DR1zrPmFRMQWc4UPdwKyY3 n= 12 'QA This is Coda Sextet' artistradio:artistradio-5
+   1Y0SGNKDGob6HjuM8cLV0y n= 21 'QA Daily Mix 1' dailymix:dailymix-1
+   AyjpL8g4WYIJNrIK8Ru8Nv n= 21 'QA Daily Mix 2' dailymix:dailymix-2
+   A3jKdjOFMjSZxKt9OHl1Mk n= 21 'QA Daily Mix 3' dailymix:dailymix-3
+   5IVXxXlo2Sj2rhCaR0S9Gq n= 24 'QA 1990s Hits' decade:decade-1990
+   8g8jbyTxnTdZDAwjplt7D3 n= 12 'QA 2010s Hits' decade:decade-2010
+   wMMV8Ugwpv6GoyER7ZRard n= 30 'QA Your Essentials' essentials:essentials
+   4BAyTf3AzibL928HvJvRbv n= 12 'QA Pop Radio' genreradio:genreradio-1
+   DfnKuIDUj4bh8Im9DuSAwc n= 12 'QA Punk Radio' genreradio:genreradio-2
+   qcZRWQwJnmAaqZCd5Ddixx n= 12 'QA Rock Radio' genreradio:genreradio-3
+   g10noimkfTctuOERNQWSN3 n= 30 'QA New Music' newmusic:newmusic
+   7ZrhfnJNQ6ZsQCstPClCd2 n= 30 'QA On Repeat' onrepeat:onrepeat
+   a9DeyrGgnmyO9W52Ut0Pz4 n= 30 'QA Afternoon' timeofday:afternoon
+   pIyMoUVU6Cie72VRtBxLwB n= 30 'QA Evening' timeofday:evening
+   gLYcttFQOXrEdWmo5RYgcI n= 30 'QA Morning' timeofday:morning
+   rZaSmnYjzQNh3SH7sC2G5z n= 30 'QA Night' timeofday:night
+   RJoWj5LTtunmiAeNvKmDB7 n= 30 'QA Wrapped 2026' wrapped:wrapped-2026
+   jzHs0Uw0fKPbUFqUZtC0NA n=  3 'QA Punk Radio' None
+[PASS] S2-5 no two plugin playlists share a name: duplicates=[]
+[PASS] S1-1 ids stable across the collision flip: same=True
+[PASS] F2 marker copy does not hijack the original: copy=('My copy of a mix', 0) original=('QA This is Zed Zero', 12)
+[PASS] S1-3 subject rotation renames in place: same id set=True; 10 renamed e.g. [('QA Billy Talent Mix', 'QA Blue Quartet Mix'), ('QA Blue Quartet Mix', 'QA Zed Zero Mix'), ('QA Pop Radio', 'QA Punk Radio')]
+starred 84 tracks from 7 artists
+[PASS] S3 default loved: 30 cap, 3 per artist: 21 tracks (expected 21)
+[PASS] S3-1 sizeLoved=60 alone is still limited by maxPerArtist: 21 tracks
+[PASS] S3-1/S3-3 sizeLoved=60 + lovedMaxPerArtist=12: 60 tracks, same id=True
+[PASS] S3-2 sizeLoved=5 raised to 10: 10 tracks
+[PASS] S3-4 sizeLoved=999 out of range inherits mixSize (30): 30 tracks
+[PASS] S3-4 garbage values inherit: 21 tracks
+--- mixSize=12 + overrides (24 playlists of admin)
+   AVOOw69KUM0sXUCJxjidr7 n= 12 'QA Artist Radio 1' artistradio:artistradio-1
+   2UOlR5u9sfHgyvEDW28NwX n= 12 'QA Artist Radio 2' artistradio:artistradio-2
+   yHjhg5RFBwfsqcZWaj5hTp n= 12 'QA Artist Radio 3' artistradio:artistradio-3
+   oZ6Af7hhZb6Dl1NQLwhzc5 n= 12 'QA Artist Radio 4' artistradio:artistradio-4
+   DR1zrPmFRMQWc4UPdwKyY3 n= 12 'QA Artist Radio 5' artistradio:artistradio-5
+   1Y0SGNKDGob6HjuM8cLV0y n= 15 'QA Daily Mix 1' dailymix:dailymix-1
+   AyjpL8g4WYIJNrIK8Ru8Nv n= 15 'QA Daily Mix 2' dailymix:dailymix-2
+   A3jKdjOFMjSZxKt9OHl1Mk n= 15 'QA Daily Mix 3' dailymix:dailymix-3
+   5IVXxXlo2Sj2rhCaR0S9Gq n= 12 'QA 1990s' decade:decade-1990
+   8g8jbyTxnTdZDAwjplt7D3 n= 12 'QA 2010s' decade:decade-2010
+   wMMV8Ugwpv6GoyER7ZRard n= 12 'QA Your Essentials' essentials:essentials
+   4BAyTf3AzibL928HvJvRbv n= 12 'QA Genre Radio 1' genreradio:genreradio-1
+   DfnKuIDUj4bh8Im9DuSAwc n= 12 'QA Genre Radio 2' genreradio:genreradio-2
+   qcZRWQwJnmAaqZCd5Ddixx n= 12 'QA Genre Radio 3' genreradio:genreradio-3
+   iuDSlxoLxzM8j4CBsHJ2eT n= 12 'QA Your Loved Songs' loved:loved
+   g10noimkfTctuOERNQWSN3 n= 20 'QA New Music' newmusic:newmusic
+   7ZrhfnJNQ6ZsQCstPClCd2 n= 12 'QA On Repeat' onrepeat:onrepeat
+   a9DeyrGgnmyO9W52Ut0Pz4 n= 10 'QA Afternoon' timeofday:afternoon
+   pIyMoUVU6Cie72VRtBxLwB n= 10 'QA Evening' timeofday:evening
+   gLYcttFQOXrEdWmo5RYgcI n= 10 'QA Morning' timeofday:morning
+   rZaSmnYjzQNh3SH7sC2G5z n= 10 'QA Night' timeofday:night
+   RJoWj5LTtunmiAeNvKmDB7 n= 12 'QA Wrapped 2026' wrapped:wrapped-2026
+   099SBBbEGKgRdIJvZQiKEn n=  0 'My copy of a mix' None
+   jzHs0Uw0fKPbUFqUZtC0NA n=  3 'QA Punk Radio' None
+[PASS] S3-1 mixSize=12 applies globally: onrepeat=12 essentials=12
+[PASS] S3-1 sizeNewMusic=20: 20
+[PASS] S3-1/S3-2 sizeTimeOfDay=3 raised to 10: 10
+[PASS] S3-1 sizeDailyMix=15: 15
+[PASS] S1-8 too-small mix (rediscover) writes nothing: no rediscover playlist exists
+[PASS] S7 idempotent run: 24 -> 24 playlists; identical=True
+[PASS] S7 no playlist ever disappeared: all 23 known ids still present
+create bob: 200
+[PASS] S1-4 bob gets his own set (day-one mixes, he has no plays yet): 6 playlists owned by bob
+[PASS] S1-4 owner isolation (no shared ids with admin's): disjoint
+[PASS] S1-4 second run: nothing duplicated or stolen: 30 -> 30 playlists
+[PASS] S1-4 admin's own playlists unchanged by bob's run: names identical
+[FAIL] plugin logged no errors: ['time="2026-10-14T23:09:54Z" level=error msg="Error removing entry from scrobble buffer" artist="Stone Pilots" error="sql: database is closed" scrobbler=navibeat-mixes track="Stone Pilots Song 2" userId=ReyYBzSNcbGLxqg6FWT7kr', 'time="2026-10-14T23:09:54Z" level=error msg="SQL: `SELECT user_id FROM scrobble_buffer WHERE (service = {:p0}) GROUP BY user_id ORDER BY count(*)`" args="map[p0:navibeat-mixes]" elapsedTime="3.273µs" error="sql: database is closed" rowsAffected=0', 'time="2026-10-14T23:09:54Z" level=error msg="Error retrieving userIds from scrobble buffer" error="sql: database is closed" scrobbler=navibeat-mixes']
+
+==== SUMMARY 0.63.1
+PASS S1-baseline
+PASS S1-2 legacy adoption
+PASS S1-1/S1-3 prefix change keeps ids
+PASS S1-3 renamed in place
+PASS S1-3 ids unchanged by templates
+PASS S2-2 artist radio name from subject
+PASS S2-2 genre radio name
+PASS S2-2 decade name
+PASS S2-6 description keeps the subject
+PASS S2-1 untemplated mixes keep default names
+PASS F1 hand-made playlist not adopted
+PASS F1 plugin made its own playlist next to it
+PASS S2-5 no two plugin playlists share a name
+PASS S1-1 ids stable across the collision flip
+PASS F2 marker copy does not hijack the original
+PASS S1-3 subject rotation renames in place
+PASS S3 default loved: 30 cap, 3 per artist
+PASS S3-1 sizeLoved=60 alone is still limited by maxPerArtist
+PASS S3-1/S3-3 sizeLoved=60 + lovedMaxPerArtist=12
+PASS S3-2 sizeLoved=5 raised to 10
+PASS S3-4 sizeLoved=999 out of range inherits mixSize (30)
+PASS S3-4 garbage values inherit
+PASS S3-1 mixSize=12 applies globally
+PASS S3-1 sizeNewMusic=20
+PASS S3-1/S3-2 sizeTimeOfDay=3 raised to 10
+PASS S3-1 sizeDailyMix=15
+PASS S1-8 too-small mix (rediscover) writes nothing
+PASS S7 idempotent run
+PASS S7 no playlist ever disappeared
+PASS S1-4 bob gets his own set (day-one mixes, he has no plays yet)
+PASS S1-4 owner isolation (no shared ids with admin's)
+PASS S1-4 second run: nothing duplicated or stolen
+PASS S1-4 admin's own playlists unchanged by bob's run
+FAIL plugin logged no errors
+33/34 passed
