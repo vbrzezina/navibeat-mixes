@@ -133,6 +133,30 @@
           "title": "Name: Rediscover",
           "default": "Rediscover"
         },
+        "nameArtistRadio": {
+          "type": "string",
+          "title": "Name template: Artist Radio",
+          "default": "",
+          "description": "Name Artist Radio playlists after the artist. Write {subject} where the artist should go, for example \"This is {subject}\" gives \"This is Billy Talent\". Leave empty to keep \"Artist Radio 1\", \"Artist Radio 2\" and so on. The playlist is renamed in place, never duplicated."
+        },
+        "nameDailyMix": {
+          "type": "string",
+          "title": "Name template: Daily Mix",
+          "default": "",
+          "description": "Name Daily Mix playlists after the artist each one is built around. Write {subject} where the artist should go, for example \"{subject} Mix\". Leave empty to keep \"Daily Mix 1\" and so on."
+        },
+        "nameGenreRadio": {
+          "type": "string",
+          "title": "Name template: Genre Radio",
+          "default": "",
+          "description": "Name Genre Radio playlists after the genre. Write {subject} where the genre should go, for example \"{subject} Radio\" gives \"Punk Radio\". Leave empty to keep \"Genre Radio 1\" and so on."
+        },
+        "nameDecade": {
+          "type": "string",
+          "title": "Name template: Decades",
+          "default": "",
+          "description": "Name the decade playlists. Write {subject} where the decade should go, for example \"{subject} Hits\" gives \"1990s Hits\". Leave empty to keep \"1990s\" and so on."
+        },
         "genreDenylist": {
           "type": "string",
           "title": "Genres to ignore",
@@ -786,6 +810,22 @@
             {
               "type": "Control",
               "scope": "#/properties/nameRediscover"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/nameArtistRadio"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/nameDailyMix"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/nameGenreRadio"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/nameDecade"
             }
           ]
         },
