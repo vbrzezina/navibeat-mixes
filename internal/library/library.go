@@ -456,6 +456,12 @@ func (c *Client) EnsureMix(kind, slot, name, legacy string) (id string, created 
 	}
 	p := c.playlists[idx]
 	if p.Name != name {
+		for _, o := range c.playlists {
+			if o.Owner == c.user && o.ID != p.ID && o.Name == name {
+				logf("renaming playlist %s to %q, which playlist %s already has", p.ID, name, o.ID)
+				break
+			}
+		}
 		if _, err := c.do("updatePlaylist", url.Values{
 			"playlistId": {p.ID}, "name": {name},
 		}); err != nil {

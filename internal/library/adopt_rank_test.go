@@ -1,6 +1,8 @@
 package library
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/nenadjokic/navibeat-mixes/internal/protocol"
@@ -109,5 +111,27 @@ func TestFindByMarkerFallsBackToChangedThenCreatedThenListOrder(t *testing.T) {
 		Playlist{ID: "b", Name: "B", Owner: "bob", Comment: m, Changed: "2026-02-01T00:00:00Z", Created: "2026-01-01T00:00:00Z"},
 	); got != "a" {
 		t.Errorf("list order: got %q", got)
+	}
+}
+
+// F6: a rename onto a name another of the owner's playlists already has is
+// still done (Navidrome allows duplicate names) but is logged with both ids.
+func TestEnsureMixLogsWhenTheRenameTargetIsAlreadyTaken(t *testing.T) {
+	var lines []string
+	Logf = func(f string, a ...any) { lines = append(lines, fmt.Sprintf(f, a...)) }
+	defer func() { Logf = nil }()
+	s := &mixServer{lists: []Playlist{
+		{ID: "mine", Name: "Old", Owner: "bob", Comment: marker("genreradio", "genreradio-1")},
+		{ID: "other", Name: "Punk Radio", Owner: "bob", Comment: marker("genreradio", "genreradio-2")},
+		{ID: "alices", Name: "Punk Radio", Owner: "alice"},
+	}}
+	if _, _, err := New(s.call, "bob").EnsureMix("genreradio", "genreradio-1", "Punk Radio", "Genre Radio 1"); err != nil {
+		t.Fatal(err)
+	}
+	if s.renames["mine"] != "Punk Radio" {
+		t.Errorf("the rename must still happen: %v", s.renames)
+	}
+	if len(lines) != 1 || !strings.Contains(lines[0], "mine") || !strings.Contains(lines[0], "other") || strings.Contains(lines[0], "alices") {
+		t.Errorf("want one line naming mine and other only, got %q", lines)
 	}
 }
