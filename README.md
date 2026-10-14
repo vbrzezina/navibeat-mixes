@@ -50,7 +50,7 @@ Up to 23 playlists, every one of them optional.
 | Decade mixes | Your strongest decades, for example 1990s |
 | Wrapped 2026 | Your most played since the plugin was installed |
 
-### The contents rotate weekly, the names do not
+### The contents rotate weekly; the names are fixed unless you ask otherwise
 
 Artist Radio, Genre Radio, Daily Mix and the decade mixes draw from a pool far
 deeper than they show: 20 artists behind 5 slots, 12 genres behind 3. Every
@@ -59,16 +59,21 @@ instead of the same top five forever.
 
 The playlist you pinned is still that playlist. Only what is inside it changed.
 
-### Playlist names never change
+### Names are fixed by default
 
-This matters more than it sounds. A playlist called "Artist Radio 1: LINKIN
-PARK" gets a new name the day your listening shifts, which creates a **new**
-playlist and orphans the old one. That is why servers running some playlist
-plugins need a cleanup script on a cron.
+This matters more than it sounds. A plugin that finds its playlists by name
+and names them after their content (for example "Artist Radio 1: LINKIN PARK")
+creates a **new** playlist the day your listening shifts and orphans the old
+one. That is why servers running some playlist plugins need a cleanup script on
+a cron.
 
-Here the name is "Artist Radio 1" and the artist goes in the description. The
-number is the identity, so the playlist you pinned last month is still the same
-playlist today, whatever is inside it.
+Here, with no name template set, the name is "Artist Radio 1" and the artist
+goes in the description. The name only changes if **you** set a name template
+(see [Stable identity and subject names](#stable-identity-and-subject-names)).
+Even then nothing is orphaned: a playlist is found by the marker in its
+description, never by its name, and is renamed in place with the same id. So
+the playlist you pinned last month is still the same playlist today, whatever
+is inside it and whatever it is called.
 
 ## Honest about what it knows
 
@@ -176,12 +181,22 @@ What that changes:
 - **Changing the prefix no longer creates a second set of playlists.** The
   existing ones are renamed in place and keep their id, so pins and
   server-side references survive.
-- **Playlists made by an older version are adopted.** If nothing carries the
-  marker yet, an exact name match is used, and from then on the playlist
-  carries the marker. No duplicate is created.
-- **If you already have duplicates** (for example from an earlier prefix
-  change), the most recently changed one is used and the others are left
+- **Playlists made by an older version are adopted, but only if they look like
+  ours.** If nothing carries the marker, an unmarked playlist of yours is
+  adopted when it is called by the old default name for that mix (for example
+  `Genre Radio 1`, with your prefix), or when it is called by the new name and
+  its description carries the "Made by NaviBeat" line. From then on it carries
+  the marker. A playlist you made by hand that merely has the same name as a
+  template result (say a "Punk Radio" of your own) is **not** adopted and is
+  never overwritten: a new playlist is created beside it.
+- **If several playlists carry the same marker** (a duplicate from an earlier
+  prefix change, or a copy you exported or duplicated, which keeps the marker
+  line), one is chosen like this: the one already called the name the mix
+  should have now, otherwise the one called the old default name, otherwise the
+  most recently changed (then created, then first listed). The others are left
   alone. The plugin never deletes a playlist, so remove the leftovers yourself.
+- **A mix you rename by hand is renamed back on the next run**, because the
+  plugin owns the name. Change the prefix or a template instead.
 - A rename that the server refuses is logged and skipped. The tracks and
   description are still written, and the old name stays until the next run.
 
@@ -204,8 +219,16 @@ family has exactly one subject, so there is exactly one placeholder,
 - The result is cleaned: control characters are removed, runs of whitespace
   become one space, and it is cut to 100 characters. The prefix is added
   after, and is not counted. An empty result falls back to the default name.
-- Two mixes never share a name. If a name equals one already used earlier in
-  the same run, the later mix uses its numbered default instead.
+- Two mixes in the same run avoid sharing a name. If a name equals one already
+  used earlier in the run, the later mix uses its numbered default instead, and
+  if that is taken too, `(2)`, `(3)` and so on is added. The plan order is
+  fixed, so the result is the same every night. Only mixes written in the same
+  run are compared. If a rename lands on a name that one of your other
+  playlists already has (a rotation overlap, or a playlist you made), Navidrome
+  allows it, nothing breaks, and the log gets one line naming both playlists.
+- A subject (an artist or genre tag) is cleaned before use: line breaks and
+  control characters become spaces and it is cut to 100 characters, in names
+  and in the description alike.
 - The description is unchanged and still names the subject.
 - When the weekly rotation brings a new artist or genre into a slot, the
   playlist is renamed in place. It is the same playlist with a new name, not a
@@ -501,6 +524,9 @@ generated cover per mix, stable from day to day.
 **`button`** trades the artwork for width. The row becomes compact buttons with
 an icon per mix, which is worth it when a shelf of six covers starts reading as
 one thing repeated rather than six different mixes.
+
+With the button style, the label on the button is the playlist name as rendered
+now, prefix removed. If you set a name template, the button follows it.
 
 ![The button style](docs/img/style-button.png)
 

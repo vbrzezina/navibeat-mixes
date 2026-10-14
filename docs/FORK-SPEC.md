@@ -35,19 +35,35 @@ Acceptance criteria:
 
 - **S1-1** The plugin looks up its playlist for a mix by (owner, kind, slot)
   parsed from the description. If found, that playlist (same id) is updated.
-- **S1-2** If no marker match exists, it falls back to an exact name match for
-  the same owner (playlists made by older versions). When that matches, the
-  playlist is adopted: tracks and description are rewritten, so it carries the
-  marker from then on. No duplicate is created.
+- **S1-2** If no marker match exists, an unmarked playlist of the same owner
+  is adopted (playlists made by older versions) only if it plausibly came from
+  this plugin: its name is the LEGACY default name of the mix (prefix plus the
+  bare default, for example `Genre Radio 1`), or its name is the wanted name
+  and its description contains the attribution line. A hand made playlist that
+  merely has the same name is NOT adopted and a new one is created. Adopted
+  playlists have tracks and description rewritten and carry the marker from
+  then on. A playlist whose marker names a different mix is never adopted.
 - **S1-3** If the stored name differs from the name the mix should have now
   (prefix change, template change, rotation), the playlist is renamed in place
   with `updatePlaylist` (parameter `name`). The id does not change.
 - **S1-4** The owner check stays: only playlists owned by the current user are
   ever matched (admins see everyone's playlists).
-- **S1-5** If several of the owner's playlists carry the same (kind, slot), the
-  most recently changed one is used and the others are left untouched.
+- **S1-5** If several of the owner's playlists carry the same (kind, slot)
+  (a duplicate, or a copy the user made, which keeps the marker), one is chosen
+  by rank: (1) its name equals the wanted name, (2) its name equals the legacy
+  default name, (3) otherwise the most recently changed, then the most recently
+  created, then the first listed. Ties inside a tier use the same recency
+  order. The others are left untouched.
 - **S1-6** A failed rename is logged and does not fail the write: tracks and
   description are still written, and the old name stays until the next run.
+  A rename onto a name another of the owner's playlists already has is still
+  done, and one log line names both ids.
+- **S1-6a** A playlist created in this call gets its description (the marker)
+  written before its tracks; if that write fails the slot counts as failed and
+  is retried. An existing playlist keeps tracks first, and a failed description
+  write is only logged.
+- **S1-6b** A hand renamed mix is renamed back on the next run: the plugin owns
+  the name.
 - **S1-7** The control mailbox playlist logic is unchanged.
 - **S1-8** A mix that is "too small" (under the minimum) still writes nothing and
   renames nothing.
@@ -77,8 +93,13 @@ Acceptance criteria:
 - **S2-4** If the cleaned result is empty, the default name is used.
 - **S2-5** Collisions: if a rendered name (prefix included) equals the name of an
   earlier mix in the same run, the later mix uses its default numbered name
-  instead. Order is the plan order, so the result is deterministic.
-- **S2-6** The description text is unchanged (it keeps naming the subject).
+  instead; if that is taken too, " (2)", " (3)" and so on is appended to it.
+  The suffix is added after the 100 character cut and the prefix, so it is
+  never cut off. Order is the plan order, so the result is deterministic.
+- **S2-6** The description text is unchanged (it keeps naming the subject). A
+  subject is cleaned (naming.Subject: control characters and line breaks become
+  spaces, cut to 100 characters) before it enters a name or a sentence, so a
+  tag cannot inject a machine line.
 - **S2-7** The existing time-of-day and Rediscover name settings keep working.
 
 ## Story 3: per-mix size and per-artist override
@@ -90,7 +111,8 @@ Acceptance criteria:
   `sizeRediscover`, `sizeWrapped`, `sizeGenreRadio`, `sizeArtistRadio`,
   `sizeDailyMix`, `sizeDecade`, `sizeTimeOfDay` (one value for all four).
 - **S3-2** `0` (the default) means "use `mixSize`". A value from 1 to 9 is raised
-  to 10 (the minimum a mix needs). The maximum is 200, like `mixSize`.
+  to 10 (the minimum a mix needs). The maximum is 200, like `mixSize`. The
+  inherited `mixSize` is clamped to 10..200 as well.
 - **S3-3** New integer setting `lovedMaxPerArtist`. `0` (default) means "use
   `maxPerArtist`". Any positive value replaces it for Your Loved Songs only.
   Maximum 1000.

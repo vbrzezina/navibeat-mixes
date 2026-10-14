@@ -542,8 +542,9 @@ func generateForUser(cfg config.Config, username string, ledger *resume.Ledger, 
 			MinUseful:    minMixSize,
 		}))
 
-	// The name and the slot never change with the order; only the description
-	// says which "new" this is, and the description is free to change.
+	// The name is fixed here (no template applies to this mix) and the slot
+	// never changes with the order; only the description says which "new" this
+	// is, and the description is free to change.
 	newMusicHuman := "NaviBeat Mixes: the newest additions to your library."
 	if byRelease {
 		newMusicHuman = "NaviBeat Mixes: the newest releases in your library."
@@ -567,14 +568,16 @@ func generateForUser(cfg config.Config, username string, ledger *resume.Ledger, 
 		"NaviBeat Mixes: music you own, played once or twice, and then forgot.", "discovery",
 		mixes.BuildDiscovery(tracks, now, 90*24*time.Hour, cfg.SizeFor("discovery"), cfg.MaxPerArtistFor("discovery")))
 
-	// Numbered mixes. The NUMBER is the identity and the subject goes in the
-	// description, so by default the name never changes when the ranking does.
-	// A {subject} template changes that on purpose, and the playlist is renamed
-	// in place (same id) when its subject rotates.
+	// Numbered mixes. The NUMBER (the slot) is the identity and the subject goes
+	// in the description, so by default the name does not change when the
+	// ranking does. A {subject} template changes that on purpose: the playlist
+	// is found by its marker, not its name, and is renamed in place (same id)
+	// when its subject rotates.
 	// Weekly rotation. The pool is deliberately DEEPER than the window: with
 	// 20 artists showing 5 at a time, a listener meets a different five every
 	// week and the whole library comes round eventually, instead of staring at
-	// the same top five forever. The name never moves, only what is inside it.
+	// the same top five forever. Without a template only what is inside a
+	// playlist moves; with one, the name follows the subject too.
 	week := mixes.WeekIndex(now)
 
 	// Same floor and same reason as the artist pool below: a genre that cannot
