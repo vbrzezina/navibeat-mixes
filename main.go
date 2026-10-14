@@ -528,7 +528,7 @@ func generateForUser(cfg config.Config, username string, ledger *resume.Ledger, 
 	// artist, the decade) through the user's template. With no template the
 	// name is the default, exactly as before. The description is not touched.
 	addSubject := func(key, kind, subject, def, slot, human string, sel mixes.Selection) {
-		addAs(key, cfg.SubjectName(kind, subject, def), cfg.Prefix+def, slot, human, kind, sel)
+		addAs(key, cfg.SubjectName(kind, naming.Subject(subject), def), cfg.Prefix+def, slot, human, kind, sel)
 	}
 
 	add("rediscover", cfg.SlotNames["rediscover"], "rediscover", "", "rediscover",
@@ -581,7 +581,7 @@ func generateForUser(cfg config.Config, username string, ledger *resume.Ledger, 
 	// fill a mix must not be given a number it will then fail to use.
 	for i, g := range mixes.Rotate(mixes.TopGenresOwning(tracks, 12, minMixSize, cfg.MaxPerArtist), week, 3) {
 		addSubject("genreradio", "genreradio", g, "Genre Radio "+strconv.Itoa(i+1), mixes.NumberedSlot(mixes.GenreRadio, i+1),
-			"NaviBeat Mixes: "+g+", one of the genres you play most. A different genre each week.",
+			naming.Sentence("genreradio", g),
 			mixes.BuildForGenre(tracks, g, cfg.SizeFor("genreradio"), cfg.MaxPerArtistFor("genreradio")))
 	}
 	// The 20 are the artists that can actually FILL an Artist Radio: an artist
@@ -593,12 +593,12 @@ func generateForUser(cfg config.Config, username string, ledger *resume.Ledger, 
 	artists := mixes.Rotate(mixes.TopArtistsOwning(tracks, 20, minMixSize), week, 5)
 	for i, a := range artists {
 		addSubject("artistradio", "artistradio", a, "Artist Radio "+strconv.Itoa(i+1), mixes.NumberedSlot(mixes.ArtistRadio, i+1),
-			"NaviBeat Mixes: everything you have by "+a+". A different artist each week.",
+			naming.Sentence("artistradio", a),
 			mixes.BuildForArtist(tracks, a, cfg.SizeFor("artistradio")))
 	}
 	for i := 0; i < 3 && i < len(artists); i++ {
 		addSubject("dailymix", "dailymix", artists[i], "Daily Mix "+strconv.Itoa(i+1), mixes.NumberedSlot(mixes.DailyMix, i+1),
-			"NaviBeat Mixes: built around "+artists[i]+" and what sits near it. Rotates weekly.",
+			naming.Sentence("dailymix", artists[i]),
 			mixes.BuildDailyMix(tracks, artists, i, cfg.SizeFor("dailymix"), cfg.MaxPerArtistFor("dailymix")))
 	}
 	// Same floor and same reason as the genre and artist pools: a decade that
@@ -606,7 +606,7 @@ func generateForUser(cfg config.Config, username string, ledger *resume.Ledger, 
 	for _, d := range mixes.Rotate(mixes.TopDecadesOwning(tracks, 6, minMixSize, cfg.MaxPerArtist), week, 2) {
 		label := strconv.Itoa(d) + "s"
 		addSubject("decade", "decade", label, label, "decade-"+strconv.Itoa(d),
-			"NaviBeat Mixes: your "+label+", ranked by what you actually play. Rotates weekly.",
+			naming.Sentence("decade", label),
 			mixes.BuildForDecade(tracks, d, cfg.SizeFor("decade"), cfg.MaxPerArtistFor("decade")))
 	}
 

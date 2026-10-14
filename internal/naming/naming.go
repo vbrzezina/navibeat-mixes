@@ -115,3 +115,33 @@ func ResolveCollisions(items []Item) []string {
 	}
 	return out
 }
+
+// Subject makes a tag value (an artist, a genre) safe to put into a playlist
+// name or into the sentence of a description: control characters and line
+// breaks become single spaces, and it is cut to MaxLen characters.
+//
+// ⛔ THE LINE BREAK IS THE POINT. The description is a human sentence, a
+// newline, and the machine line, and protocol.Parse takes the FIRST line that
+// starts with "nb1:". An artist tag containing "\nnb1:a:b:c:d:1" would put a
+// bogus machine line ahead of the real one, so the mix could never be found
+// again and a duplicate would be created on every run. Tags are written by
+// whoever tagged the file, so they are untrusted text.
+func Subject(s string) string { return Clean(s) }
+
+// Sentence is the human line of the description of a mix named after a
+// subject. kind is the mix family; subject is cleaned here, so a caller cannot
+// forget to. An unknown kind gives just the cleaned subject.
+func Sentence(kind, subject string) string {
+	s := Subject(subject)
+	switch kind {
+	case "genreradio":
+		return "NaviBeat Mixes: " + s + ", one of the genres you play most. A different genre each week."
+	case "artistradio":
+		return "NaviBeat Mixes: everything you have by " + s + ". A different artist each week."
+	case "dailymix":
+		return "NaviBeat Mixes: built around " + s + " and what sits near it. Rotates weekly."
+	case "decade":
+		return "NaviBeat Mixes: your " + s + ", ranked by what you actually play. Rotates weekly."
+	}
+	return s
+}
