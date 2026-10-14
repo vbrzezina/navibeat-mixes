@@ -671,12 +671,16 @@ func (c *Client) ReplaceTracks(playlistID string, trackIDs []string) error {
 		return fmt.Errorf("replace %s: no tracks to write", playlistID)
 	}
 	// Every id travels in the query string of a GET. A Navidrome id is 22
-	// characters, so the largest mix (200) is about 6 KB of query, which fits
-	// the 8 KB request line limit of the common reverse proxies. A server with
-	// longer ids would not, so past maxSongIDQuery the rest goes in follow-up
-	// updatePlaylist calls. The first call is still the replace, so a failure
-	// part way leaves a shorter playlist, never a mix of old and new tracks.
-	first, rest := splitIDs(trackIDs, maxSongIDQuery)
+	// characters, so the largest mix (200) is 200 x len("songId=<id>&") = 6000
+	// bytes of query, which fits the 8 KB request line limit of the common
+	// reverse proxies. A server with longer ids would not, so past
+	// maxSongIDQuery the rest goes in follow-up updatePlaylist calls. The first
+	// call is still the replace, so a failure part way leaves a SHORTER
+	// playlist, never a mix of old and new tracks. In that case ReplaceTracks
+	// returns the error, the caller does not mark the slot done and does not
+	// write a fresh description of an existing playlist, so the description
+	// stays stale until the retry on the next pass completes the playlist.
+	first, rest := splitIDs(trackIDs, maxSongIDQuery, "songId")
 	params := url.Values{"playlistId": {playlistID}}
 	for _, id := range first {
 		params.Add("songId", id)
@@ -686,7 +690,7 @@ func (c *Client) ReplaceTracks(playlistID string, trackIDs []string) error {
 	}
 	for len(rest) > 0 {
 		var chunk []string
-		chunk, rest = splitIDs(rest, maxSongIDQuery)
+		chunk, rest = splitIDs(rest, maxSongIDQuery, "songIdToAdd")
 		add := url.Values{"playlistId": {playlistID}}
 		for _, id := range chunk {
 			add.Add("songIdToAdd", id)
@@ -698,17 +702,22 @@ func (c *Client) ReplaceTracks(playlistID string, trackIDs []string) error {
 	return nil
 }
 
-// maxSongIDQuery bounds the encoded song ids in one request, in bytes. 200
-// Navidrome ids come to about 6 KB, so this only splits unusually long ids.
+// maxSongIDQuery bounds the song id part of one request's query, in bytes,
+// counting every "<key>=<escaped id>&". It is a deliberately safe cap and not
+// a measured limit: the request line also carries the endpoint and the
+// authentication and format parameters (a few hundred bytes), and the common
+// reverse proxy limit is 8192, so 7000 leaves headroom. A normal 200 track mix
+// is 6000 bytes and never splits.
 const maxSongIDQuery = 7000
 
 // splitIDs returns the longest prefix of ids whose encoded query form
-// ("songId=<id>&") stays within budget, and the remainder. At least one id is
-// always taken, so progress is guaranteed.
-func splitIDs(ids []string, budget int) (head, tail []string) {
+// ("<key>=<escaped id>&" per id, with the real key the call will use) stays
+// within budget, and the remainder. At least one id is always taken, so
+// progress is guaranteed and an id longer than the whole budget goes alone.
+func splitIDs(ids []string, budget int, key string) (head, tail []string) {
 	used := 0
 	for i, id := range ids {
-		used += len("songIdToAdd=&") + len(url.QueryEscape(id))
+		used += len(key) + len("=&") + len(url.QueryEscape(id))
 		if used > budget && i > 0 {
 			return ids[:i], ids[i:]
 		}
