@@ -254,6 +254,30 @@ none of the configured ids, it gets no mixes at all and the log says so, naming
 the ids and the account (0.9.17). Before 0.9.17 that account drew from every
 library it could see, which is the opposite of what the setting asks for.
 
+### Per-mix sizes
+
+`mixSize` sets how many tracks every mix holds. Each mix family can have its own
+size instead, in the "Sizes" group of the settings form: `sizeNewMusic`,
+`sizeLoved`, `sizeOnRepeat`, `sizeEssentials`, `sizeDiscovery`,
+`sizeRediscover`, `sizeWrapped`, `sizeGenreRadio`, `sizeArtistRadio`,
+`sizeDailyMix`, `sizeDecade`, and `sizeTimeOfDay` (one value for Morning,
+Afternoon, Evening and Night).
+
+- `0`, the default, means "use `mixSize`". Nothing changes until you set one.
+- A value from 1 to 9 is raised to 10, the least a mix needs to be written.
+  The most is 200.
+- A value that is not a whole number in range is ignored and the mix keeps
+  `mixSize`; it never stops the plugin.
+
+`lovedMaxPerArtist` is the same idea for "most tracks from one artist", for
+Your Loved Songs only. `0` uses `maxPerArtist`; any value up to 1000 replaces
+it for that one mix, so every starred track by one artist can be kept while the
+other mixes still spread across artists.
+
+A bigger mix needs a deeper pool: a mix can only hold what the plugin found, so
+mixes drawn from the recent-albums pool may come out shorter than asked.
+Your Loved Songs reads every starred track, so it is not limited that way.
+
 ### On a slow server
 
 Navidrome stops any plugin call after 30 seconds, and a full run is about 300

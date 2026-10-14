@@ -661,6 +661,110 @@
           "title": "Colour: Wrapped",
           "default": "",
           "description": "Six hex digits, for example F2A65A. Leave empty for the built-in colour."
+        },
+        "sizeNewMusic": {
+          "type": "integer",
+          "title": "Size: New Music",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Tracks in New Music. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200."
+        },
+        "sizeLoved": {
+          "type": "integer",
+          "title": "Size: Your Loved Songs",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Tracks in Your Loved Songs. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200."
+        },
+        "sizeOnRepeat": {
+          "type": "integer",
+          "title": "Size: On Repeat",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Tracks in On Repeat. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200."
+        },
+        "sizeEssentials": {
+          "type": "integer",
+          "title": "Size: Your Essentials",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Tracks in Your Essentials. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200."
+        },
+        "sizeDiscovery": {
+          "type": "integer",
+          "title": "Size: Weekly Discovery",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Tracks in Weekly Discovery. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200."
+        },
+        "sizeRediscover": {
+          "type": "integer",
+          "title": "Size: Rediscover",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Tracks in Rediscover. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200."
+        },
+        "sizeWrapped": {
+          "type": "integer",
+          "title": "Size: Wrapped",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Tracks in Wrapped. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200."
+        },
+        "sizeGenreRadio": {
+          "type": "integer",
+          "title": "Size: Genre Radio",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Tracks in Genre Radio. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200."
+        },
+        "sizeArtistRadio": {
+          "type": "integer",
+          "title": "Size: Artist Radio",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Tracks in Artist Radio. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200."
+        },
+        "sizeDailyMix": {
+          "type": "integer",
+          "title": "Size: Daily Mix",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Tracks in Daily Mix. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200."
+        },
+        "sizeDecade": {
+          "type": "integer",
+          "title": "Size: Decades",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Tracks in Decades. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200."
+        },
+        "sizeTimeOfDay": {
+          "type": "integer",
+          "title": "Size: Morning, Afternoon, Evening and Night",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Tracks in Morning, Afternoon, Evening and Night. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200."
+        },
+        "lovedMaxPerArtist": {
+          "type": "integer",
+          "title": "Loved Songs: most tracks from one artist",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Replaces \"Most tracks from one artist\" for Your Loved Songs only. 0 uses that setting. Raise it so a favourite artist's starred tracks are not cut to three. Maximum 1000."
         }
       }
     },
@@ -786,6 +890,64 @@
             {
               "type": "Control",
               "scope": "#/properties/nameRediscover"
+            }
+          ]
+        },
+        {
+          "type": "Group",
+          "label": "Sizes",
+          "elements": [
+            {
+              "type": "Control",
+              "scope": "#/properties/sizeNewMusic"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/sizeLoved"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/sizeOnRepeat"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/sizeEssentials"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/sizeDiscovery"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/sizeRediscover"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/sizeWrapped"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/sizeGenreRadio"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/sizeArtistRadio"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/sizeDailyMix"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/sizeDecade"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/sizeTimeOfDay"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/lovedMaxPerArtist"
             }
           ]
         },
