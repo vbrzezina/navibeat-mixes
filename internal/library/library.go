@@ -410,46 +410,49 @@ func (c *Client) create(name string) (string, error) {
 // second one was created next to it, orphaning the first. A playlist's id and
 // its marker survive a rename, so they are what a mix is looked up by now.
 //
+// name is the name the mix should have now. legacy is the name an older
+// version of the plugin gave it (prefix plus the bare default, for example
+// "Genre Radio 1"); it equals name unless a name template is set.
+//
 // Order of lookup, all of it among THIS user's playlists only:
 //
-//  1. The marker. If several playlists carry the same (kind, slot) the one
-//     changed most recently wins and the others are left exactly as they are:
-//     this plugin never deletes, and a duplicate is not ours to judge.
-//  2. An exact name match, for playlists written before the marker was
-//     trusted as identity. The playlist is then rewritten by the caller and
-//     carries the marker from then on. A playlist whose marker names a
-//     DIFFERENT mix is skipped here: it already has an identity, and taking it
-//     because the names happen to be equal would steal it from its own slot.
-//  3. Nothing found: create it.
+//  1. The marker, ranked (see findByMarker): a playlist already called name
+//     first, then one called legacy, then the most recently changed. Others
+//     carrying the same marker (a copy the user made, a duplicate) are left
+//     exactly as they are: this plugin never deletes, and they are not ours
+//     to judge.
+//  2. Adoption of a playlist with NO marker, for playlists written before the
+//     marker was trusted as identity. It is adopted only if it plausibly came
+//     from this plugin: it is called legacy, or it is called name and its
+//     description carries protocol.Attribution. A hand made "Punk Radio" with
+//     no such trace is NOT adopted, because rendering a template can produce
+//     any name and overwriting somebody's own playlist is not recoverable.
+//     A playlist whose marker names a DIFFERENT mix is never adopted: it has
+//     an identity, and taking it would steal it from its own slot.
+//  3. Nothing found: create it. created is then true.
 //
 // When the stored name is not the wanted name the playlist is renamed in
 // place (updatePlaylist, parameter name), so the id never changes. A failed
 // rename is logged and does not fail the write: the tracks and description
-// still go in and the old name stays until the next run.
+// still go in and the old name stays until the next run. If another of this
+// user's playlists already has the target name the rename still happens
+// (Navidrome allows duplicate names) but one line names both ids.
 //
 // ⛔ THE OWNER CHECK IS LOAD BEARING, exactly as in EnsurePlaylist and
 // FindControl: an admin's getPlaylists holds every user's playlists, and a
 // marker is identical across users. Matching without the owner would rename
 // and overwrite somebody else's mix.
-func (c *Client) EnsureMix(kind, slot, name string) (string, error) {
+func (c *Client) EnsureMix(kind, slot, name, legacy string) (id string, created bool, err error) {
 	if err := c.load(); err != nil {
-		return "", err
+		return "", false, err
 	}
-	idx := c.findByMarker(kind, slot)
+	idx := c.findByMarker(kind, slot, name, legacy)
 	if idx < 0 {
-		for i, p := range c.playlists {
-			if p.Owner != c.user || p.Name != name {
-				continue
-			}
-			if meta, ok := protocol.Parse(p.Comment); ok && (meta.Kind != kind || meta.Slot != slot) {
-				continue
-			}
-			idx = i
-			break
-		}
+		idx = c.findToAdopt(kind, slot, name, legacy)
 	}
 	if idx < 0 {
-		return c.create(name)
+		id, err := c.create(name)
+		return id, err == nil, err
 	}
 	p := c.playlists[idx]
 	if p.Name != name {
@@ -461,14 +464,53 @@ func (c *Client) EnsureMix(kind, slot, name string) (string, error) {
 			c.playlists[idx].Name = name
 		}
 	}
-	return p.ID, nil
+	return p.ID, false, nil
+}
+
+// findToAdopt returns the index of an unmarked playlist of this user that an
+// older version of the plugin plausibly wrote for this mix, or -1. See step 2
+// of EnsureMix. One called name is preferred over one called legacy.
+func (c *Client) findToAdopt(kind, slot, name, legacy string) int {
+	pick := func(want string, needTrace bool) int {
+		for i, p := range c.playlists {
+			if p.Owner != c.user || p.Name != want {
+				continue
+			}
+			if meta, ok := protocol.Parse(p.Comment); ok && (meta.Kind != kind || meta.Slot != slot) {
+				continue
+			}
+			if needTrace && !strings.Contains(p.Comment, protocol.Attribution) {
+				continue
+			}
+			return i
+		}
+		return -1
+	}
+	if i := pick(name, name != legacy); i >= 0 {
+		return i
+	}
+	if name != legacy {
+		return pick(legacy, false)
+	}
+	return -1
 }
 
 // findByMarker returns the index in c.playlists of this user's playlist for
-// (kind, slot), the most recently changed when there are several, or -1.
-func (c *Client) findByMarker(kind, slot string) int {
+// (kind, slot), or -1. When several carry the marker (a copy the user made
+// keeps it too) they are ranked:
+//
+//  1. its name equals the wanted name,
+//  2. its name equals the legacy default name,
+//  3. otherwise the most recently changed, then the most recently created,
+//     then the first listed.
+//
+// Within a tier the same recency order breaks ties. The ranking is what stops a
+// duplicate the user made, and is editing, from taking over the mix because it
+// happens to be newer than the real one.
+func (c *Client) findByMarker(kind, slot, name, legacy string) int {
 	best := -1
-	var bestAt time.Time
+	var bestTier int
+	var bestChanged, bestCreated time.Time
 	for i, p := range c.playlists {
 		if p.Owner != c.user {
 			continue
@@ -477,14 +519,21 @@ func (c *Client) findByMarker(kind, slot string) int {
 		if !ok || meta.Kind != kind || meta.Slot != slot {
 			continue
 		}
-		at := parseTime(p.Changed)
-		if at.IsZero() {
-			at = parseTime(p.Created)
+		tier := 3
+		switch p.Name {
+		case name:
+			tier = 1
+		case legacy:
+			tier = 2
 		}
-		// Strictly newer wins, so on a tie the first listed is kept and the
-		// answer does not depend on anything but the server's order.
-		if best < 0 || at.After(bestAt) {
-			best, bestAt = i, at
+		changed, created := parseTime(p.Changed), parseTime(p.Created)
+		// Strictly better wins, so on a full tie the first listed is kept and
+		// the answer does not depend on anything but the server's order.
+		better := best < 0 || tier < bestTier ||
+			(tier == bestTier && (changed.After(bestChanged) ||
+				(changed.Equal(bestChanged) && created.After(bestCreated))))
+		if better {
+			best, bestTier, bestChanged, bestCreated = i, tier, changed, created
 		}
 	}
 	return best

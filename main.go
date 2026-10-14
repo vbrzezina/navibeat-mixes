@@ -686,7 +686,7 @@ func generateForUser(cfg config.Config, username string, ledger *resume.Ledger, 
 		// The retry cannot spin. MarkUserDone below runs whatever happens, so
 		// the day still ends, and every slot that succeeds drops out of the
 		// next pass, so successive passes get shorter rather than longer.
-		outcome := writeNamed(client, cfg, e.name, e.sel, human, e.kind, now, username)
+		outcome := writeNamed(client, cfg, e.name, e.def, e.sel, human, e.kind, now, username)
 		if outcome != writeFailed {
 			ledger.MarkSlotDone(username, e.slot)
 		}
@@ -718,7 +718,7 @@ func writeMix(client *library.Client, cfg config.Config, sel mixes.Selection, no
 		return
 	}
 
-	writeNamed(client, cfg, cfg.PlaylistName(string(sel.Slot)), sel, describe(cfg, sel), kindFor(sel.Slot), now, username)
+	writeNamed(client, cfg, cfg.PlaylistName(string(sel.Slot)), cfg.PlaylistName(string(sel.Slot)), sel, describe(cfg, sel), kindFor(sel.Slot), now, username)
 }
 
 // publishStyle writes the presentation style onto the control playlist, and is
@@ -793,7 +793,7 @@ const (
 // numbered mix came through here and this branch said nothing at all. One line
 // naming the playlist and its count against the threshold is what turns a
 // missing number into something a person can read off a log.
-func writeNamed(client *library.Client, cfg config.Config, name string, sel mixes.Selection, human, kind string, now time.Time, username string) writeOutcome {
+func writeNamed(client *library.Client, cfg config.Config, name, legacy string, sel mixes.Selection, human, kind string, now time.Time, username string) writeOutcome {
 	if len(sel.TrackIDs) < minMixSize {
 		logf("user %s: %s has %d tracks, under the %d a mix needs, so it was left alone",
 			username, name, len(sel.TrackIDs), minMixSize)
@@ -802,7 +802,7 @@ func writeNamed(client *library.Client, cfg config.Config, name string, sel mixe
 	// Found by the (kind, slot) marker, not by name, so a changed prefix or a
 	// subject template renames the playlist in place instead of creating a
 	// second one beside it.
-	id, err := client.EnsureMix(kind, string(sel.Slot), name)
+	id, _, err := client.EnsureMix(kind, string(sel.Slot), name, legacy)
 	if err != nil {
 		logf("user %s: %v", username, err)
 		return writeFailed

@@ -30,8 +30,8 @@ func (s *mixServer) call(uri string) (string, error) {
 			if i > 0 {
 				items += ","
 			}
-			items += fmt.Sprintf(`{"id":%q,"name":%q,"comment":%q,"owner":%q,"changed":%q}`,
-				l.ID, l.Name, l.Comment, l.Owner, l.Changed)
+			items += fmt.Sprintf(`{"id":%q,"name":%q,"comment":%q,"owner":%q,"changed":%q,"created":%q}`,
+				l.ID, l.Name, l.Comment, l.Owner, l.Changed, l.Created)
 		}
 		return `{"subsonic-response":{"status":"ok","playlists":{"playlist":[` + items + `]}}}`, nil
 	case "createPlaylist":
@@ -71,7 +71,7 @@ func TestEnsureMixFindsByMarkerAndRenamesInPlace(t *testing.T) {
 		{ID: "a1", Name: "Old Prefix Artist Radio 1", Owner: "bob", Comment: marker("artistradio", "artistradio-1")},
 	}}
 	c := New(s.call, "bob")
-	id, err := c.EnsureMix("artistradio", "artistradio-1", "New Prefix This is Billy Talent")
+	id, _, err := c.EnsureMix("artistradio", "artistradio-1", "New Prefix This is Billy Talent", "New Prefix Artist Radio 1")
 	if err != nil || id != "a1" {
 		t.Fatalf("id=%q err=%v", id, err)
 	}
@@ -82,7 +82,7 @@ func TestEnsureMixFindsByMarkerAndRenamesInPlace(t *testing.T) {
 		t.Errorf("a duplicate was created: %v", s.creates)
 	}
 	// The cache follows the rename, so a second call sends nothing.
-	if _, err := c.EnsureMix("artistradio", "artistradio-1", "New Prefix This is Billy Talent"); err != nil {
+	if _, _, err := c.EnsureMix("artistradio", "artistradio-1", "New Prefix This is Billy Talent", "New Prefix Artist Radio 1"); err != nil {
 		t.Fatal(err)
 	}
 	if len(s.renames) != 1 || s.count("updatePlaylist") != 1 {
@@ -95,7 +95,7 @@ func TestEnsureMixSkipsRenameWhenNameMatches(t *testing.T) {
 	s := &mixServer{lists: []Playlist{
 		{ID: "a1", Name: "Same", Owner: "bob", Comment: marker("loved", "loved")},
 	}}
-	if _, err := New(s.call, "bob").EnsureMix("loved", "loved", "Same"); err != nil {
+	if _, _, err := New(s.call, "bob").EnsureMix("loved", "loved", "Same", "Same"); err != nil {
 		t.Fatal(err)
 	}
 	if s.count("updatePlaylist") != 0 {
@@ -109,7 +109,7 @@ func TestEnsureMixAdoptsByNameWhenThereIsNoMarker(t *testing.T) {
 	s := &mixServer{lists: []Playlist{
 		{ID: "old", Name: "Daily Mix 1", Owner: "bob", Comment: "just a sentence"},
 	}}
-	id, err := New(s.call, "bob").EnsureMix("dailymix", "dailymix-1", "Daily Mix 1")
+	id, _, err := New(s.call, "bob").EnsureMix("dailymix", "dailymix-1", "Daily Mix 1", "Daily Mix 1")
 	if err != nil || id != "old" {
 		t.Fatalf("id=%q err=%v", id, err)
 	}
@@ -124,7 +124,7 @@ func TestEnsureMixDoesNotStealAnotherMixByName(t *testing.T) {
 	s := &mixServer{lists: []Playlist{
 		{ID: "other", Name: "Punk Radio", Owner: "bob", Comment: marker("genreradio", "genreradio-2")},
 	}}
-	id, err := New(s.call, "bob").EnsureMix("genreradio", "genreradio-1", "Punk Radio")
+	id, _, err := New(s.call, "bob").EnsureMix("genreradio", "genreradio-1", "Punk Radio", "Genre Radio 1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +141,7 @@ func TestEnsureMixNeverMatchesAnotherUsersPlaylist(t *testing.T) {
 	s := &mixServer{lists: []Playlist{
 		{ID: "alice1", Name: "Morning", Owner: "alice", Comment: marker("timeofday", "morning")},
 	}}
-	id, err := New(s.call, "bob").EnsureMix("timeofday", "morning", "Morning")
+	id, _, err := New(s.call, "bob").EnsureMix("timeofday", "morning", "Morning", "Morning")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +164,7 @@ func TestEnsureMixPicksMostRecentlyChangedAndLeavesTheRest(t *testing.T) {
 		{ID: "newest", Name: "B", Owner: "bob", Comment: marker("loved", "loved"), Changed: "2026-03-01T10:00:00Z"},
 		{ID: "mid", Name: "C", Owner: "bob", Comment: marker("loved", "loved"), Changed: "2026-02-01T10:00:00Z"},
 	}}
-	id, err := New(s.call, "bob").EnsureMix("loved", "loved", "Loved")
+	id, _, err := New(s.call, "bob").EnsureMix("loved", "loved", "Loved", "Loved")
 	if err != nil || id != "newest" {
 		t.Fatalf("id=%q err=%v", id, err)
 	}
@@ -179,7 +179,7 @@ func TestEnsureMixFailedRenameStillReturnsThePlaylist(t *testing.T) {
 		{ID: "a1", Name: "Old", Owner: "bob", Comment: marker("loved", "loved")},
 	}}
 	c := New(s.call, "bob")
-	id, err := c.EnsureMix("loved", "loved", "New")
+	id, _, err := c.EnsureMix("loved", "loved", "New", "New")
 	if err != nil || id != "a1" {
 		t.Fatalf("id=%q err=%v", id, err)
 	}
@@ -193,14 +193,14 @@ func TestEnsureMixFailedRenameStillReturnsThePlaylist(t *testing.T) {
 func TestEnsureMixCreatesAndCachesWhenNothingMatches(t *testing.T) {
 	s := &mixServer{}
 	c := New(s.call, "bob")
-	id, err := c.EnsureMix("loved", "loved", "Loved")
-	if err != nil || id != "new1" {
-		t.Fatalf("id=%q err=%v", id, err)
+	id, created, err := c.EnsureMix("loved", "loved", "Loved", "Loved")
+	if err != nil || id != "new1" || !created {
+		t.Fatalf("id=%q created=%v err=%v", id, created, err)
 	}
 	if err := c.SetComment(id, marker("loved", "loved")); err != nil {
 		t.Fatal(err)
 	}
-	again, _ := c.EnsureMix("loved", "loved", "Renamed")
+	again, _, _ := c.EnsureMix("loved", "loved", "Renamed", "Loved")
 	if again != "new1" || len(s.creates) != 1 {
 		t.Errorf("again=%q creates=%v", again, s.creates)
 	}
