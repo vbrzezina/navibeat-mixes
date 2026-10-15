@@ -170,69 +170,35 @@ Your mixes appear within a minute of enabling it, and refresh at 04:00 daily.
 
 ## Stable identity and subject names
 
-**Playlists are found by what they are, not by what they are called.** Every
-playlist this plugin writes carries a machine line in its description
-(`nb1:<kind>:<slot>:...`), and the kind plus the slot is the identity of the
-mix. Each night the plugin looks for your playlist by that identity, among your
-own playlists only, and updates it.
+Playlists are found by what they are, not by what they are called. Every
+playlist the plugin writes carries a machine line in its description
+(`nb1:<kind>:<slot>:...`); kind plus slot is the identity of the mix, matched
+among your own playlists only. Changing the prefix or a name therefore renames
+your playlists in place (same id) instead of creating a second set.
 
-What that changes:
+Three optional settings in the Names group name a mix after what is in it. Each
+has one placeholder, `{subject}`:
 
-- **Changing the prefix no longer creates a second set of playlists.** The
-  existing ones are renamed in place and keep their id, so pins and
-  server-side references survive.
-- **Playlists made by an older version are adopted, but only if they look like
-  ours.** If nothing carries the marker, an unmarked playlist of yours is
-  adopted when it is called by the old default name for that mix (for example
-  `Genre Radio 1`, with your prefix), or when it is called by the new name and
-  its description carries the "Made by NaviBeat" line. From then on it carries
-  the marker. A playlist you made by hand that merely has the same name as a
-  template result (say a "Punk Radio" of your own) is **not** adopted and is
-  never overwritten: a new playlist is created beside it.
-- **If several playlists carry the same marker** (a duplicate from an earlier
-  prefix change, or a copy you exported or duplicated, which keeps the marker
-  line), one is chosen like this: the one already called the name the mix
-  should have now, otherwise the one called the old default name, otherwise the
-  most recently changed (then created, then first listed). The others are left
-  alone. The plugin never deletes a playlist, so remove the leftovers yourself.
-- **A mix you rename by hand is renamed back on the next run**, because the
-  plugin owns the name. Change the prefix or a template instead.
-- A rename that the server refuses is logged and skipped. The tracks and
-  description are still written, and the old name stays until the next run.
-
-**Name mixes after what is in them.** Artist Radio, Daily Mix, Genre Radio and
-the decade mixes each have one optional name template in the Names group. Each
-family has exactly one subject, so there is exactly one placeholder,
-`{subject}`:
-
-| Setting | Subject | Example template | Result |
+| Setting | Subject | Example | Result |
 |---|---|---|---|
-| Name template: Artist Radio | the artist | `This is {subject}` | `This is Billy Talent` |
-| Name template: Daily Mix | the anchor artist | `{subject} Mix` | `Billy Talent Mix` |
-| Name template: Genre Radio | the genre | `{subject} Radio` | `Punk Radio` |
-| Name template: Decades | the decade | `{subject} Hits` | `1990s Hits` |
+| Name: Artist Radio | the artist | `This is {subject}` | `This is Billy Talent` |
+| Name: Genre Radio | the genre | `{subject} Radio` | `Punk Radio` |
+| Name: Decade | the decade | `{subject} Hits` | `1990s Hits` |
 
-- Empty (the default) keeps today's names: `Artist Radio 1`, `Daily Mix 2`,
-  `Genre Radio 3`, `1990s`.
-- The placeholder is case sensitive and may appear any number of times. All
-  other text is kept as written.
-- The result is cleaned: control characters are removed, runs of whitespace
-  become one space, and it is cut to 100 characters. The prefix is added
-  after, and is not counted. An empty result falls back to the default name.
-- Two mixes in the same run avoid sharing a name. If a name equals one already
-  used earlier in the run, the later mix uses its numbered default instead, and
-  if that is taken too, `(2)`, `(3)` and so on is added. The plan order is
-  fixed, so the result is the same every night. Only mixes written in the same
-  run are compared. If a rename lands on a name that one of your other
-  playlists already has (a rotation overlap, or a playlist you made), Navidrome
-  allows it, nothing breaks, and the log gets one line naming both playlists.
-- A subject (an artist or genre tag) is cleaned before use: line breaks and
-  control characters become spaces and it is cut to 100 characters, in names
-  and in the description alike.
-- The description is unchanged and still names the subject.
-- When the weekly rotation brings a new artist or genre into a slot, the
-  playlist is renamed in place. It is the same playlist with a new name, not a
-  new one.
+- Empty (the default) keeps the usual names: `Artist Radio 1`, `Genre Radio 3`,
+  `1990s`.
+- The name is cleaned and cut to 100 characters; the prefix is added after and
+  is not counted.
+- If two mixes in a run would get the same name, the later one falls back to
+  its default numbered name (then `(2)`, `(3)` and so on if that is taken too).
+- A mix you rename by hand is renamed back on the next run: the plugin owns the
+  name. Change the prefix or a setting instead.
+- Playlists from an older version are adopted only if they look like ours: the
+  old default name, or the new name plus the "Made by NaviBeat" line. A
+  playlist of yours that merely has the same name is never overwritten.
+- If several playlists carry the same marker, the one already called the
+  wanted name wins, then the one with the old default name, then the most
+  recently changed. The others are left alone; the plugin never deletes.
 
 ## Configuration
 
@@ -324,30 +290,6 @@ is skipped and named in the log, so one typo among good ids stops nothing
 none of the configured ids, it gets no mixes at all and the log says so, naming
 the ids and the account (0.9.17). Before 0.9.17 that account drew from every
 library it could see, which is the opposite of what the setting asks for.
-
-### Per-mix sizes
-
-`mixSize` sets how many tracks every mix holds. Each mix family can have its own
-size instead, in the "Sizes" group of the settings form: `sizeNewMusic`,
-`sizeLoved`, `sizeOnRepeat`, `sizeEssentials`, `sizeDiscovery`,
-`sizeRediscover`, `sizeWrapped`, `sizeGenreRadio`, `sizeArtistRadio`,
-`sizeDailyMix`, `sizeDecade`, and `sizeTimeOfDay` (one value for Morning,
-Afternoon, Evening and Night).
-
-- `0`, the default, means "use `mixSize`". Nothing changes until you set one.
-- A value from 1 to 9 is raised to 10, the least a mix needs to be written.
-  The most is 200.
-- A value that is not a whole number in range is ignored and the mix keeps
-  `mixSize`; it never stops the plugin.
-
-`lovedMaxPerArtist` is the same idea for "most tracks from one artist", for
-Your Loved Songs only. `0` uses `maxPerArtist`; any value up to 1000 replaces
-it for that one mix, so every starred track by one artist can be kept while the
-other mixes still spread across artists.
-
-A bigger mix needs a deeper pool: a mix can only hold what the plugin found, so
-mixes drawn from the recent-albums pool may come out shorter than asked.
-Your Loved Songs reads every starred track, so it is not limited that way.
 
 ### On a slow server
 
