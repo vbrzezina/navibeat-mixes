@@ -1,6 +1,6 @@
 # Fork spec: stable identity and subject names
 
-Status: scope cut in phase 1 (per-mix sizes dropped).
+Status: scope reduced before release (per-mix sizes and a Daily Mix name setting dropped).
 Base: upstream v0.9.17. Fork version: `0.9.17-vb.2`.
 Rule for every file in this repo, including this one: no em dash.
 
@@ -13,7 +13,7 @@ Three things a real user hit on a real server:
 2. The user wants playlists named after what is in them ("This is Linkin Park",
    "Punk Radio"). Today the subject only appears in the description, because a
    name that changes would orphan the playlist (see 1).
-3. (Dropped in phase 1.) `mixSize` is one global number; per-mix sizes were
+3. (Dropped.) `mixSize` is one global number; per-mix sizes were
    considered and cut. Sizes stay exactly as upstream.
 
 ## Non-goals
@@ -105,13 +105,13 @@ Acceptance criteria:
 - **S2-8** Daily Mix has no name setting: it keeps its fixed name "Daily Mix N".
   Its description sentence is still cleaned (naming.Sentence) and its name is
   reserved in the collision step like any fixed name.
-- **S2-9** Settings removed in phase 1 (`size*`, `lovedMaxPerArtist`,
+- **S2-9** Settings removed before release (`size*`, `lovedMaxPerArtist`,
   `nameDailyMix`) may still be saved in an install that had them; they are
   ignored without an error.
 
-## Story 3: per-mix size and per-artist override (dropped in phase 1)
+## Story 3: per-mix size and per-artist override (dropped)
 
-Dropped in phase 1, sizes stay as upstream: no `size*` settings and no
+Dropped: sizes stay as upstream: no `size*` settings and no
 `lovedMaxPerArtist`. `mixSize` and `maxPerArtist` apply to every mix as before.
 The ReplaceTracks long id split that existed only for big sizes is gone too.
 
