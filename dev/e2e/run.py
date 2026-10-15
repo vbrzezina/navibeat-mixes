@@ -236,8 +236,8 @@ def main():
     # ---- hand-made not adopted (F1) comes later with templates
 
     # ---- 4. templates
-    cfg = {"prefix": "QA ", "nameArtistRadio": "This is {subject}", "nameGenreRadio": "{subject} Radio",
-           "nameDailyMix": "{subject} Mix", "nameDecade": "{subject} Hits"}
+    cfg = {"prefix": "QA ", "nameArtistRadio": "This is {subject}", "nameGenreRadio": "Radio: {subject}",
+           "nameDecade": "{subject} Hits"}
     regen(cfg)
     d = snap()
     dump("templates", d)
@@ -248,7 +248,9 @@ def main():
     check("S2-2 artist radio name from subject", bool(v1 and subj and v1["name"] == f"QA This is {subj}"), f"{v1 and v1['name']!r} subject={subj!r}")
     gk, gv = byslot(d, "genreradio:genreradio-1")
     gsub = gv["comment"].split("NaviBeat Mixes: ")[1].split(",")[0] if gv else None
-    check("S2-2 genre radio name", gv is not None and gv["name"] == f"QA {gsub} Radio", f"{gv['name']!r} genre={gsub!r}")
+    check("S2-2 genre radio name", gv is not None and gv["name"] == f"QA Radio: {gsub}", f"{gv['name']!r} genre={gsub!r}")
+    dm = sorted(v["name"] for v in mine(d).values() if v["slot"] and v["slot"].startswith("dailymix:"))
+    check("S2-8 Daily Mix keeps its fixed numbered name", dm == ["QA Daily Mix 1", "QA Daily Mix 2", "QA Daily Mix 3"], dm)
     dk, dv = byslot(d, "decade:decade-1990")
     check("S2-2 decade name", dv is not None and dv["name"] == "QA 1990s Hits", repr(dv and dv["name"]))
     check("S2-6 description keeps the subject", bool(v1 and "everything you have by" in v1["comment"]), (v1 or {}).get("comment", "").split("\n")[0])
@@ -262,8 +264,8 @@ def main():
     # the plugin made its own 'QA Punk Radio' (genre radio) next to the hand-made one: two same-named is expected
     check("F1 plugin made its own playlist next to it", sum(1 for n in names if n == "QA Punk Radio") in (1, 2), f"'QA Punk Radio' count {names.count('QA Punk Radio')}")
 
-    # ---- collision (S2-5): daily mix uses the same template as artist radio
-    cfg2 = dict(cfg, nameDailyMix="This is {subject}")
+    # ---- collision (S2-5): a template without a placeholder gives every genre radio the same name
+    cfg2 = dict(cfg, nameGenreRadio="Radio")
     regen(cfg2)
     d = snap()
     dump("collision", d)
@@ -271,6 +273,8 @@ def main():
     nm = [v["name"] for v in plug.values()]
     dupn = sorted({n for n in nm if nm.count(n) > 1})
     check("S2-5 no two plugin playlists share a name", not dupn, f"duplicates={dupn}")
+    gen = sorted(v["name"] for v in plug.values() if v["slot"].startswith("genreradio:"))
+    check("S2-5 first keeps the name, the others fall back to numbered defaults", gen == ["QA Genre Radio 2", "QA Genre Radio 3", "QA Radio"], gen)
     check("S1-1 ids stable across the collision flip", set(plug) == base_ids, f"same={set(plug) == base_ids}")
 
     # ---- F2: a copy carrying the marker must not hijack the original
@@ -312,26 +316,22 @@ def main():
         return (k, v["n"]) if v else (None, 0)
 
     base_cfg = {"prefix": "QA "}
+    expect = min(30, 3 * len(arts))
     k0, n0 = loved_n(base_cfg)
-    check("S3 default loved: 30 cap, 3 per artist", n0 == min(30, 3 * len(arts)), f"{n0} tracks (expected {min(30, 3 * len(arts))})")
-    k1_, n1 = loved_n(dict(base_cfg, sizeLoved=60))
-    check("S3-1 sizeLoved=60 alone is still limited by maxPerArtist", n1 == min(60, 3 * len(arts)), f"{n1} tracks")
-    k2_, n2 = loved_n(dict(base_cfg, sizeLoved=60, lovedMaxPerArtist=12))
-    check("S3-1/S3-3 sizeLoved=60 + lovedMaxPerArtist=12", n2 == 60 and k2_ == k0, f"{n2} tracks, same id={k2_ == k0}")
-    k3_, n3 = loved_n(dict(base_cfg, sizeLoved=5, lovedMaxPerArtist=12))
-    check("S3-2 sizeLoved=5 raised to 10", n3 == 10, f"{n3} tracks")
-    k4_, n4 = loved_n(dict(base_cfg, sizeLoved=999, lovedMaxPerArtist=12))
-    check("S3-4 sizeLoved=999 out of range inherits mixSize (30)", n4 == 30, f"{n4} tracks")
-    k5_, n5 = loved_n(dict(base_cfg, sizeLoved="abc", lovedMaxPerArtist="x"))
-    check("S3-4 garbage values inherit", n5 == min(30, 3 * len(arts)), f"{n5} tracks")
-    regen(dict(base_cfg, mixSize=12, sizeNewMusic=20, sizeTimeOfDay=3, sizeDailyMix=15))
+    check("Loved stays upstream: 30 cap, 3 per artist", n0 == expect, f"{n0} tracks (expected {expect})")
+    k1_, n1 = loved_n(dict(base_cfg, mixSize=200))
+    check("Loved stays upstream: mixSize=200 still limited by maxPerArtist=3", n1 == 3 * len(arts) and k1_ == k0, f"{n1} tracks, same id={k1_ == k0}")
+    # settings that no longer exist are ignored, not an error
+    regen(dict(base_cfg, sizeLoved=60, lovedMaxPerArtist=12, nameDailyMix="{subject} Mix"))
     d = snap()
-    dump("mixSize=12 + overrides", d)
+    check("retired settings are ignored", (byslot(d, "loved:loved")[1] or {}).get("n") == expect
+          and sorted(v["name"] for v in mine(d).values() if (v["slot"] or "").startswith("dailymix:")) == ["QA Daily Mix 1", "QA Daily Mix 2", "QA Daily Mix 3"],
+          f"loved={(byslot(d, 'loved:loved')[1] or {}).get('n')}")
+    regen(dict(base_cfg, mixSize=12))
+    d = snap()
+    dump("mixSize=12", d)
     g = lambda s: (byslot(d, s)[1] or {}).get("n")
-    check("S3-1 mixSize=12 applies globally", g("onrepeat:onrepeat") == 12 and g("essentials:essentials") == 12, f"onrepeat={g('onrepeat:onrepeat')} essentials={g('essentials:essentials')}")
-    check("S3-1 sizeNewMusic=20", g("newmusic:newmusic") == 20, g("newmusic:newmusic"))
-    check("S3-1/S3-2 sizeTimeOfDay=3 raised to 10", g("timeofday:afternoon") == 10, g("timeofday:afternoon"))
-    check("S3-1 sizeDailyMix=15", g("dailymix:dailymix-1") == 15, g("dailymix:dailymix-1"))
+    check("global mixSize=12 still applies", g("onrepeat:onrepeat") == 12 and g("essentials:essentials") == 12, f"onrepeat={g('onrepeat:onrepeat')} essentials={g('essentials:essentials')}")
 
     # ---- S1-8: a mix that is too small writes and renames nothing
     d = snap()
