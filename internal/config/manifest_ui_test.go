@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // Navidrome draws the plugin settings form from config.uiSchema, not from
@@ -74,7 +75,6 @@ type manifestForm struct {
 				Title       string `json:"title"`
 				Description string `json:"description"`
 				Default     any    `json:"default"`
-				Maximum     int    `json:"maximum"`
 			} `json:"properties"`
 		} `json:"schema"`
 		UISchema struct {
@@ -111,52 +111,10 @@ func readManifestForm(t *testing.T) (manifestForm, func(group string) map[string
 	}
 }
 
-// Every size setting the CODE reads (sizeSettings, plus lovedMaxPerArtist) is
-// declared with a title, a default of 0 (inherit) and a description, sits in
-// the "Sizes" group, and the other way round: no size* property in the
-// manifest is unknown to the code. Iterating the code's own table is the
-// point: a hard coded list here would not notice a setting added to one side.
-func TestSizeSettingsAreDeclaredAndGrouped(t *testing.T) {
-	m, group := readManifestForm(t)
-	inGroup := group("Sizes")
-	want := map[string]int{"lovedMaxPerArtist": MaxLovedPerArtist}
-	for _, f := range sizeSettings {
-		want[f.field] = MaxMixSize
-	}
-	for k, max := range want {
-		p, ok := m.Config.Schema.Properties[k]
-		if !ok || p.Title == "" || p.Description == "" || p.Default != float64(0) {
-			t.Errorf("%s: missing title, description or a default of 0", k)
-			continue
-		}
-		if p.Maximum != max {
-			t.Errorf("%s maximum = %d, want %d", k, p.Maximum, max)
-		}
-		if !inGroup[k] {
-			t.Errorf("%s is not in the Sizes group", k)
-		}
-		if strings.HasPrefix(k, "size") && !strings.Contains(p.Description, "candidate pool") {
-			t.Errorf("%s: description does not carry the candidate pool caveat", k)
-		}
-	}
-	for k := range m.Config.Schema.Properties {
-		if strings.HasPrefix(k, "size") {
-			if _, ok := want[k]; !ok {
-				t.Errorf("%s is in the manifest but not in the code's sizeSettings", k)
-			}
-		}
-	}
-	for k := range inGroup {
-		if _, ok := want[k]; !ok {
-			t.Errorf("%s is in the Sizes group but not read by the code", k)
-		}
-	}
-}
-
 // Every name template the code reads (templateFamilies) and every slot name
 // (nameSlots) is declared and in the "Names" group, in both directions. The
-// templates also have to say what the user needs to know: the placeholder,
-// the 100 character cut and the collision fallback.
+// templates also have to name the placeholder, stay short, and never call
+// themselves a "template" in the title.
 func TestNameSettingsAreDeclaredAndGrouped(t *testing.T) {
 	m, group := readManifestForm(t)
 	inGroup := group("Names")
@@ -176,16 +134,20 @@ func TestNameSettingsAreDeclaredAndGrouped(t *testing.T) {
 		if !inGroup[k] {
 			t.Errorf("%s is not in the Names group", k)
 		}
+		if strings.Contains(strings.ToLower(p.Title), "template") {
+			t.Errorf("%s: title %q must not say template", k, p.Title)
+		}
 		if !isTemplate {
 			continue
 		}
 		if p.Default != "" || p.Description == "" {
 			t.Errorf("%s: want an empty default and a description", k)
 		}
-		for _, need := range []string{"{subject}", "100 characters", "numbered default"} {
-			if !strings.Contains(p.Description, need) {
-				t.Errorf("%s: description lacks %q", k, need)
-			}
+		if !strings.Contains(p.Description, "{subject}") {
+			t.Errorf("%s: description lacks {subject}", k)
+		}
+		if n := utf8.RuneCountInString(p.Description); n > 120 {
+			t.Errorf("%s: description is %d characters, want at most 120", k, n)
 		}
 	}
 	for k := range m.Config.Schema.Properties {

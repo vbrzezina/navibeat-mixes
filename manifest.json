@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/navidrome/navidrome/refs/heads/master/plugins/manifest-schema.json",
   "name": "NaviBeat Mixes",
   "author": "Nenad Jokic",
-  "version": "0.9.17-vb.1",
+  "version": "0.9.17-vb.2",
   "description": "Listening-aware playlists: time-of-day mixes, Rediscover, and Wrapped recaps. Now also decides how NaviBeat draws them.",
   "website": "https://navibeat.app",
   "permissions": {
@@ -135,27 +135,21 @@
         },
         "nameArtistRadio": {
           "type": "string",
-          "title": "Name template: Artist Radio",
+          "title": "Name: Artist Radio",
           "default": "",
-          "description": "Name Artist Radio playlists after the artist. Write {subject} where the artist should go, for example \"This is {subject}\" gives \"This is Billy Talent\". Leave empty to keep \"Artist Radio 1\", \"Artist Radio 2\" and so on. The playlist is found by the marker line in its description and renamed in place, never duplicated. The finished name is cut to 100 characters (the prefix is not counted). If it would equal the name of another mix, this mix uses its numbered default name instead, with \" (2)\", \" (3)\" and so on added if that is taken as well."
-        },
-        "nameDailyMix": {
-          "type": "string",
-          "title": "Name template: Daily Mix",
-          "default": "",
-          "description": "Name Daily Mix playlists after the artist each one is built around. Write {subject} where the artist should go, for example \"{subject} Mix\". Leave empty to keep \"Daily Mix 1\" and so on. The playlist is found by the marker line in its description and renamed in place, never duplicated. The finished name is cut to 100 characters (the prefix is not counted). If it would equal the name of another mix, this mix uses its numbered default name instead, with \" (2)\", \" (3)\" and so on added if that is taken as well."
+          "description": "Use {subject} for the artist, for example \"Radio: {subject}\". Leave empty for \"Artist Radio 1\"."
         },
         "nameGenreRadio": {
           "type": "string",
-          "title": "Name template: Genre Radio",
+          "title": "Name: Genre Radio",
           "default": "",
-          "description": "Name Genre Radio playlists after the genre. Write {subject} where the genre should go, for example \"{subject} Radio\" gives \"Punk Radio\". Leave empty to keep \"Genre Radio 1\" and so on. The playlist is found by the marker line in its description and renamed in place, never duplicated. The finished name is cut to 100 characters (the prefix is not counted). If it would equal the name of another mix, this mix uses its numbered default name instead, with \" (2)\", \" (3)\" and so on added if that is taken as well."
+          "description": "Use {subject} for the genre, for example \"Radio: {subject}\". Leave empty for \"Genre Radio 1\"."
         },
         "nameDecade": {
           "type": "string",
-          "title": "Name template: Decades",
+          "title": "Name: Decade",
           "default": "",
-          "description": "Name the decade playlists. Write {subject} where the decade should go, for example \"{subject} Hits\" gives \"1990s Hits\". Leave empty to keep \"1990s\" and so on. The playlist is found by the marker line in its description and renamed in place, never duplicated. The finished name is cut to 100 characters (the prefix is not counted). If it would equal the name of another mix, this mix uses its numbered default name instead, with \" (2)\", \" (3)\" and so on added if that is taken as well."
+          "description": "Use {subject} for the decade, for example \"{subject} Hits\". Leave empty for \"1990s\"."
         },
         "genreDenylist": {
           "type": "string",
@@ -685,110 +679,6 @@
           "title": "Colour: Wrapped",
           "default": "",
           "description": "Six hex digits, for example F2A65A. Leave empty for the built-in colour."
-        },
-        "sizeNewMusic": {
-          "type": "integer",
-          "title": "Size: New Music",
-          "default": 0,
-          "minimum": 0,
-          "maximum": 200,
-          "description": "Tracks in New Music. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200. The mix can hold fewer tracks than this when your library cannot supply them: the size is bounded by the candidate pool and the per-artist limit."
-        },
-        "sizeLoved": {
-          "type": "integer",
-          "title": "Size: Your Loved Songs",
-          "default": 0,
-          "minimum": 0,
-          "maximum": 200,
-          "description": "Tracks in Your Loved Songs. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200. The mix can hold fewer tracks than this when your library cannot supply them: the size is bounded by the candidate pool and the per-artist limit."
-        },
-        "sizeOnRepeat": {
-          "type": "integer",
-          "title": "Size: On Repeat",
-          "default": 0,
-          "minimum": 0,
-          "maximum": 200,
-          "description": "Tracks in On Repeat. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200. The mix can hold fewer tracks than this when your library cannot supply them: the size is bounded by the candidate pool and the per-artist limit."
-        },
-        "sizeEssentials": {
-          "type": "integer",
-          "title": "Size: Your Essentials",
-          "default": 0,
-          "minimum": 0,
-          "maximum": 200,
-          "description": "Tracks in Your Essentials. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200. The mix can hold fewer tracks than this when your library cannot supply them: the size is bounded by the candidate pool and the per-artist limit."
-        },
-        "sizeDiscovery": {
-          "type": "integer",
-          "title": "Size: Weekly Discovery",
-          "default": 0,
-          "minimum": 0,
-          "maximum": 200,
-          "description": "Tracks in Weekly Discovery. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200. The mix can hold fewer tracks than this when your library cannot supply them: the size is bounded by the candidate pool and the per-artist limit."
-        },
-        "sizeRediscover": {
-          "type": "integer",
-          "title": "Size: Rediscover",
-          "default": 0,
-          "minimum": 0,
-          "maximum": 200,
-          "description": "Tracks in Rediscover. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200. The mix can hold fewer tracks than this when your library cannot supply them: the size is bounded by the candidate pool and the per-artist limit."
-        },
-        "sizeWrapped": {
-          "type": "integer",
-          "title": "Size: Wrapped",
-          "default": 0,
-          "minimum": 0,
-          "maximum": 200,
-          "description": "Tracks in Wrapped. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200. The mix can hold fewer tracks than this when your library cannot supply them: the size is bounded by the candidate pool and the per-artist limit."
-        },
-        "sizeGenreRadio": {
-          "type": "integer",
-          "title": "Size: Genre Radio",
-          "default": 0,
-          "minimum": 0,
-          "maximum": 200,
-          "description": "Tracks in Genre Radio. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200. The mix can hold fewer tracks than this when your library cannot supply them: the size is bounded by the candidate pool and the per-artist limit."
-        },
-        "sizeArtistRadio": {
-          "type": "integer",
-          "title": "Size: Artist Radio",
-          "default": 0,
-          "minimum": 0,
-          "maximum": 200,
-          "description": "Tracks in Artist Radio. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200. The mix can hold fewer tracks than this when your library cannot supply them: the size is bounded by the candidate pool and the per-artist limit."
-        },
-        "sizeDailyMix": {
-          "type": "integer",
-          "title": "Size: Daily Mix",
-          "default": 0,
-          "minimum": 0,
-          "maximum": 200,
-          "description": "Tracks in Daily Mix. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200. The mix can hold fewer tracks than this when your library cannot supply them: the size is bounded by the candidate pool and the per-artist limit."
-        },
-        "sizeDecade": {
-          "type": "integer",
-          "title": "Size: Decades",
-          "default": 0,
-          "minimum": 0,
-          "maximum": 200,
-          "description": "Tracks in Decades. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200. The mix can hold fewer tracks than this when your library cannot supply them: the size is bounded by the candidate pool and the per-artist limit."
-        },
-        "sizeTimeOfDay": {
-          "type": "integer",
-          "title": "Size: Morning, Afternoon, Evening and Night",
-          "default": 0,
-          "minimum": 0,
-          "maximum": 200,
-          "description": "Tracks in Morning, Afternoon, Evening and Night. 0 uses \"Tracks per mix\". A value from 1 to 9 is raised to 10, the least a mix needs. Maximum 200. The mix can hold fewer tracks than this when your library cannot supply them: the size is bounded by the candidate pool and the per-artist limit."
-        },
-        "lovedMaxPerArtist": {
-          "type": "integer",
-          "title": "Loved Songs: most tracks from one artist",
-          "default": 0,
-          "minimum": 0,
-          "maximum": 1000,
-          "description": "Replaces \"Most tracks from one artist\" for Your Loved Songs only. 0 uses that setting. Raise it so a favourite artist's starred tracks are not cut to three. Maximum 1000."
         }
       }
     },
@@ -921,73 +811,11 @@
             },
             {
               "type": "Control",
-              "scope": "#/properties/nameDailyMix"
-            },
-            {
-              "type": "Control",
               "scope": "#/properties/nameGenreRadio"
             },
             {
               "type": "Control",
               "scope": "#/properties/nameDecade"
-            }
-          ]
-        },
-        {
-          "type": "Group",
-          "label": "Sizes",
-          "elements": [
-            {
-              "type": "Control",
-              "scope": "#/properties/sizeNewMusic"
-            },
-            {
-              "type": "Control",
-              "scope": "#/properties/sizeLoved"
-            },
-            {
-              "type": "Control",
-              "scope": "#/properties/sizeOnRepeat"
-            },
-            {
-              "type": "Control",
-              "scope": "#/properties/sizeEssentials"
-            },
-            {
-              "type": "Control",
-              "scope": "#/properties/sizeDiscovery"
-            },
-            {
-              "type": "Control",
-              "scope": "#/properties/sizeRediscover"
-            },
-            {
-              "type": "Control",
-              "scope": "#/properties/sizeWrapped"
-            },
-            {
-              "type": "Control",
-              "scope": "#/properties/sizeGenreRadio"
-            },
-            {
-              "type": "Control",
-              "scope": "#/properties/sizeArtistRadio"
-            },
-            {
-              "type": "Control",
-              "scope": "#/properties/sizeDailyMix"
-            },
-            {
-              "type": "Control",
-              "scope": "#/properties/sizeDecade"
-            },
-            {
-              "type": "Control",
-              "scope": "#/properties/sizeTimeOfDay"
-            },
-            {
-              "type": "Control",
-              "scope": "#/properties/lovedMaxPerArtist"
             }
           ]
         },
