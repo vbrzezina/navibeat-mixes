@@ -670,59 +670,12 @@ func (c *Client) ReplaceTracks(playlistID string, trackIDs []string) error {
 	if len(trackIDs) == 0 {
 		return fmt.Errorf("replace %s: no tracks to write", playlistID)
 	}
-	// Every id travels in the query string of a GET. A Navidrome id is 22
-	// characters, so the largest mix (200) is 200 x len("songId=<id>&") = 6000
-	// bytes of query, which fits the 8 KB request line limit of the common
-	// reverse proxies. A server with longer ids would not, so past
-	// maxSongIDQuery the rest goes in follow-up updatePlaylist calls. The first
-	// call is still the replace, so a failure part way leaves a SHORTER
-	// playlist, never a mix of old and new tracks. In that case ReplaceTracks
-	// returns the error, the caller does not mark the slot done and does not
-	// write a fresh description of an existing playlist, so the description
-	// stays stale until the retry on the next pass completes the playlist.
-	first, rest := splitIDs(trackIDs, maxSongIDQuery, "songId")
 	params := url.Values{"playlistId": {playlistID}}
-	for _, id := range first {
+	for _, id := range trackIDs {
 		params.Add("songId", id)
 	}
-	if _, err := c.do("createPlaylist", params); err != nil {
-		return err
-	}
-	for len(rest) > 0 {
-		var chunk []string
-		chunk, rest = splitIDs(rest, maxSongIDQuery, "songIdToAdd")
-		add := url.Values{"playlistId": {playlistID}}
-		for _, id := range chunk {
-			add.Add("songIdToAdd", id)
-		}
-		if _, err := c.do("updatePlaylist", add); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// maxSongIDQuery bounds the song id part of one request's query, in bytes,
-// counting every "<key>=<escaped id>&". It is a deliberately safe cap and not
-// a measured limit: the request line also carries the endpoint and the
-// authentication and format parameters (a few hundred bytes), and the common
-// reverse proxy limit is 8192, so 7000 leaves headroom. A normal 200 track mix
-// is 6000 bytes and never splits.
-const maxSongIDQuery = 7000
-
-// splitIDs returns the longest prefix of ids whose encoded query form
-// ("<key>=<escaped id>&" per id, with the real key the call will use) stays
-// within budget, and the remainder. At least one id is always taken, so
-// progress is guaranteed and an id longer than the whole budget goes alone.
-func splitIDs(ids []string, budget int, key string) (head, tail []string) {
-	used := 0
-	for i, id := range ids {
-		used += len(key) + len("=&") + len(url.QueryEscape(id))
-		if used > budget && i > 0 {
-			return ids[:i], ids[i:]
-		}
-	}
-	return ids, nil
+	_, err := c.do("createPlaylist", params)
+	return err
 }
 
 // SetComment writes the playlist description.

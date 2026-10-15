@@ -537,7 +537,7 @@ func generateForUser(cfg config.Config, username string, ledger *resume.Ledger, 
 			MinAge:       time.Duration(cfg.RediscoverMonths) * 30 * 24 * time.Hour,
 			RecentGrace:  30 * 24 * time.Hour,
 			MinPlayCount: 3,
-			Size:         cfg.SizeFor("rediscover"),
+			Size:         cfg.MixSize,
 			RelaxFloor:   30 * 24 * time.Hour,
 			MinUseful:    minMixSize,
 		}))
@@ -550,23 +550,23 @@ func generateForUser(cfg config.Config, username string, ledger *resume.Ledger, 
 		newMusicHuman = "NaviBeat Mixes: the newest releases in your library."
 	}
 	add("newmusic", "New Music", "newmusic", newMusicHuman, "newmusic",
-		mixes.BuildNewMusicBy(tracks, mixes.NewMusicOrder(cfg.NewMusicOrder), cfg.SizeFor("newmusic"), cfg.MaxPerArtistFor("newmusic")))
+		mixes.BuildNewMusicBy(tracks, mixes.NewMusicOrder(cfg.NewMusicOrder), cfg.MixSize, cfg.MaxPerArtist))
 
 	add("loved", "Your Loved Songs", "loved",
 		"NaviBeat Mixes: everything you starred, oldest favourite first.", "loved",
-		mixes.BuildLovedSongs(tracks, cfg.SizeFor("loved"), cfg.MaxPerArtistFor("loved")))
+		mixes.BuildLovedSongs(tracks, cfg.MixSize, cfg.MaxPerArtist))
 
 	add("onrepeat", "On Repeat", "onrepeat",
 		"NaviBeat Mixes: what you have been playing over and over lately.", "onrepeat",
-		mixes.BuildOnRepeat(tracks, now, 30*24*time.Hour, cfg.SizeFor("onrepeat"), cfg.MaxPerArtistFor("onrepeat")))
+		mixes.BuildOnRepeat(tracks, now, 30*24*time.Hour, cfg.MixSize, cfg.MaxPerArtist))
 
 	add("essentials", "Your Essentials", "essentials",
 		"NaviBeat Mixes: your most played of all time.", "essentials",
-		mixes.BuildEssentials(tracks, cfg.SizeFor("essentials"), cfg.MaxPerArtistFor("essentials")))
+		mixes.BuildEssentials(tracks, cfg.MixSize, cfg.MaxPerArtist))
 
 	add("discovery", "Weekly Discovery", "discovery",
 		"NaviBeat Mixes: music you own, played once or twice, and then forgot.", "discovery",
-		mixes.BuildDiscovery(tracks, now, 90*24*time.Hour, cfg.SizeFor("discovery"), cfg.MaxPerArtistFor("discovery")))
+		mixes.BuildDiscovery(tracks, now, 90*24*time.Hour, cfg.MixSize, cfg.MaxPerArtist))
 
 	// Numbered mixes. The NUMBER (the slot) is the identity and the subject goes
 	// in the description, so by default the name does not change when the
@@ -585,7 +585,7 @@ func generateForUser(cfg config.Config, username string, ledger *resume.Ledger, 
 	for i, g := range mixes.Rotate(mixes.TopGenresOwning(tracks, 12, minMixSize, cfg.MaxPerArtist), week, 3) {
 		addSubject("genreradio", "genreradio", g, "Genre Radio "+strconv.Itoa(i+1), mixes.NumberedSlot(mixes.GenreRadio, i+1),
 			naming.Sentence("genreradio", g),
-			mixes.BuildForGenre(tracks, g, cfg.SizeFor("genreradio"), cfg.MaxPerArtistFor("genreradio")))
+			mixes.BuildForGenre(tracks, g, cfg.MixSize, cfg.MaxPerArtist))
 	}
 	// The 20 are the artists that can actually FILL an Artist Radio: an artist
 	// with fewer than minMixSize tracks in the pool would be numbered, then
@@ -597,12 +597,12 @@ func generateForUser(cfg config.Config, username string, ledger *resume.Ledger, 
 	for i, a := range artists {
 		addSubject("artistradio", "artistradio", a, "Artist Radio "+strconv.Itoa(i+1), mixes.NumberedSlot(mixes.ArtistRadio, i+1),
 			naming.Sentence("artistradio", a),
-			mixes.BuildForArtist(tracks, a, cfg.SizeFor("artistradio")))
+			mixes.BuildForArtist(tracks, a, cfg.MixSize))
 	}
 	for i := 0; i < 3 && i < len(artists); i++ {
-		addSubject("dailymix", "dailymix", artists[i], "Daily Mix "+strconv.Itoa(i+1), mixes.NumberedSlot(mixes.DailyMix, i+1),
-			naming.Sentence("dailymix", artists[i]),
-			mixes.BuildDailyMix(tracks, artists, i, cfg.SizeFor("dailymix"), cfg.MaxPerArtistFor("dailymix")))
+		add("dailymix", "Daily Mix "+strconv.Itoa(i+1), mixes.NumberedSlot(mixes.DailyMix, i+1),
+			naming.Sentence("dailymix", artists[i]), "dailymix",
+			mixes.BuildDailyMix(tracks, artists, i, cfg.MixSize, cfg.MaxPerArtist))
 	}
 	// Same floor and same reason as the genre and artist pools: a decade that
 	// cannot fill a mix must not take a rotation slot it will then leave empty.
@@ -610,13 +610,13 @@ func generateForUser(cfg config.Config, username string, ledger *resume.Ledger, 
 		label := strconv.Itoa(d) + "s"
 		addSubject("decade", "decade", label, label, "decade-"+strconv.Itoa(d),
 			naming.Sentence("decade", label),
-			mixes.BuildForDecade(tracks, d, cfg.SizeFor("decade"), cfg.MaxPerArtistFor("decade")))
+			mixes.BuildForDecade(tracks, d, cfg.MixSize, cfg.MaxPerArtist))
 	}
 
 	if cfg.MixEnabled("wrapped") {
 		year := mixes.YearOf(now)
 		sel := mixes.BuildWrapped(tracks, mixes.WrappedOptions{
-			Plays: state.TotalPlays(), Size: cfg.SizeFor("wrapped"), MaxPerArtist: cfg.MaxPerArtistFor("wrapped"),
+			Plays: state.TotalPlays(), Size: cfg.MixSize, MaxPerArtist: cfg.MaxPerArtist,
 		})
 		sel.Slot = mixes.Slot(mixes.WrappedSlot(year))
 		plan = append(plan, entry{"wrapped", cfg.Prefix + mixes.WrappedName(year), cfg.Prefix + mixes.WrappedName(year), mixes.WrappedSlot(year),
@@ -628,7 +628,7 @@ func generateForUser(cfg config.Config, username string, ledger *resume.Ledger, 
 		sel := mixes.BuildTimeMix(tracks, mixes.TimeMixOptions{
 			Slot: slot, Affinity: affinity, EventCount: state.Events,
 			MinEventsForAffinity: cfg.MinEventsForAffinity,
-			Size:                 cfg.SizeFor(string(slot)), MaxPerArtist: cfg.MaxPerArtistFor(string(slot)),
+			Size:                 cfg.MixSize, MaxPerArtist: cfg.MaxPerArtist,
 			// 0.9.3: a different slice of the slot's pool each day.
 			Day: mixes.DayIndex(now),
 		})

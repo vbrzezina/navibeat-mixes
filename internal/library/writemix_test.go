@@ -2,6 +2,7 @@ package library
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 	"testing"
@@ -32,7 +33,13 @@ func (s *opServer) call(uri string) (string, error) {
 	return `{"subsonic-response":{"status":"ok"}}`, nil
 }
 
-func tenIDs() []string { return ids(10, 22) }
+func tenIDs() []string {
+	out := make([]string, 10)
+	for i := range out {
+		out[i] = fmt.Sprintf("%022d", i)
+	}
+	return out
+}
 
 // F7: a just created playlist gets its marker BEFORE the tracks.
 func TestWriteMixWritesTheMarkerFirstForACreatedPlaylist(t *testing.T) {

@@ -35,14 +35,6 @@ type Config struct {
 	// it is a setting rather than a new hardcoded number. Default 3 keeps
 	// every existing install byte-identical.
 	MaxPerArtist int
-	// MixSizes holds the per-family size overrides, keyed by family (see
-	// sizeSettings). A family with no entry, or a zero one, uses MixSize.
-	MixSizes map[string]int
-	// LovedMaxPerArtist replaces MaxPerArtist for Your Loved Songs only. Zero
-	// means use MaxPerArtist. A person who starred 40 tracks by one artist
-	// wants them all in a mix called "everything you starred", while still
-	// wanting the three-per-artist spread everywhere else.
-	LovedMaxPerArtist int
 	// RediscoverMonths is how old a track's last play must be before
 	// Rediscover will consider it.
 	RediscoverMonths int
@@ -249,7 +241,6 @@ func Defaults() Config {
 		Prefix:               "\U0001F7E0 ", // large orange circle, the NaviBeat brand colour
 		MixSize:              30,
 		MaxPerArtist:         3,
-		MixSizes:             map[string]int{},
 		RediscoverMonths:     6,
 		MinEventsForAffinity: 150,
 		GenreDenylist:        []string{"Music", "Musik", "Musique"},
@@ -287,7 +278,7 @@ var nameSlots = []struct{ key, suffix string }{
 // templateFamilies is every mix family whose name can follow its subject, with
 // the settings key that holds the template.
 var templateFamilies = []struct{ kind, field string }{
-	{"artistradio", "nameArtistRadio"}, {"dailymix", "nameDailyMix"},
+	{"artistradio", "nameArtistRadio"},
 	{"genreradio", "nameGenreRadio"}, {"decade", "nameDecade"},
 }
 
@@ -397,15 +388,6 @@ func Load(get Getter) Config {
 	}
 	if n, ok := positiveInt(get("maxPerArtist")); ok {
 		c.MaxPerArtist = n
-	}
-	// Per-mix sizes. 0 (or anything unusable) leaves the family on mixSize.
-	for _, f := range sizeSettings {
-		if n := sizeOverride(get(f.field)); n > 0 {
-			c.MixSizes[f.family] = n
-		}
-	}
-	if n, err := strconv.Atoi(strings.TrimSpace(get("lovedMaxPerArtist"))); err == nil && n > 0 && n <= MaxLovedPerArtist {
-		c.LovedMaxPerArtist = n
 	}
 	if n, ok := positiveInt(get("rediscoverMonths")); ok {
 		c.RediscoverMonths = n
@@ -549,79 +531,6 @@ func (c Config) PlaylistName(slot string) string {
 // Radio 1"), which also gets the prefix.
 func (c Config) SubjectName(kind, subject, def string) string {
 	return c.Prefix + naming.Render(c.NameTemplates[kind], subject, def)
-}
-
-// The bounds of a per-mix size. MinMixSize is the least a mix needs to be
-// written at all, so a smaller request is raised to it rather than producing a
-// playlist the plugin would then refuse to write. MaxMixSize matches mixSize.
-const (
-	MinMixSize        = 10
-	MaxMixSize        = 200
-	MaxLovedPerArtist = 1000
-)
-
-// sizeSettings maps each size setting to the mix family it sizes. The four
-// time-of-day mixes share one setting, so they share one family.
-var sizeSettings = []struct{ field, family string }{
-	{"sizeNewMusic", "newmusic"}, {"sizeLoved", "loved"},
-	{"sizeOnRepeat", "onrepeat"}, {"sizeEssentials", "essentials"},
-	{"sizeDiscovery", "discovery"}, {"sizeRediscover", "rediscover"},
-	{"sizeWrapped", "wrapped"}, {"sizeGenreRadio", "genreradio"},
-	{"sizeArtistRadio", "artistradio"}, {"sizeDailyMix", "dailymix"},
-	{"sizeDecade", "decade"}, {"sizeTimeOfDay", "timeofday"},
-}
-
-// sizeFamily folds the four time-of-day keys into their one family.
-func sizeFamily(key string) string {
-	key = strings.ToLower(strings.TrimSpace(key))
-	switch key {
-	case "morning", "afternoon", "evening", "night":
-		return "timeofday"
-	}
-	return key
-}
-
-// sizeOverride reads one size setting. 0 means inherit. 1 to 9 is raised to
-// the minimum. Anything non-numeric, negative or above the maximum is treated
-// as unset: a typo must leave the mix at its normal size, not at an extreme.
-func sizeOverride(raw string) int {
-	n, err := strconv.Atoi(strings.TrimSpace(raw))
-	if err != nil || n <= 0 || n > MaxMixSize {
-		return 0
-	}
-	if n < MinMixSize {
-		n = MinMixSize
-	}
-	return n
-}
-
-// SizeFor is how many tracks the mix with this key should hold: its own
-// override when one is set, otherwise the global MixSize. Keys are the same
-// ones MixEnabled takes, so the four time-of-day slots share sizeTimeOfDay.
-//
-// The inherited global is clamped to MinMixSize..MaxMixSize like an override
-// is, so a hand edited mixSize of 5 or 500 cannot escape the bounds the
-// settings form documents.
-func (c Config) SizeFor(key string) int {
-	if n := c.MixSizes[sizeFamily(key)]; n > 0 {
-		return n
-	}
-	switch {
-	case c.MixSize < MinMixSize:
-		return MinMixSize
-	case c.MixSize > MaxMixSize:
-		return MaxMixSize
-	}
-	return c.MixSize
-}
-
-// MaxPerArtistFor is the per-artist cap for the mix with this key. Only Your
-// Loved Songs has its own; every other mix uses MaxPerArtist.
-func (c Config) MaxPerArtistFor(key string) int {
-	if strings.EqualFold(strings.TrimSpace(key), "loved") && c.LovedMaxPerArtist > 0 {
-		return c.LovedMaxPerArtist
-	}
-	return c.MaxPerArtist
 }
 
 func positiveInt(s string) (int, bool) {
