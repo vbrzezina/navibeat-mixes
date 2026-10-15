@@ -189,8 +189,9 @@ has one placeholder, `{subject}`:
   `1990s`.
 - The name is cleaned and cut to 100 characters; the prefix is added after and
   is not counted.
-- If two mixes in a run would get the same name, the later one falls back to
-  its default numbered name (then `(2)`, `(3)` and so on if that is taken too).
+- Fixed names (Morning, Daily Mix 1, New Music, ...) always keep their name. If a
+  name from a template is already taken, that mix falls back to its default
+  numbered name instead (then `(2)`, `(3)` and so on if that is taken too).
 - A mix you rename by hand is renamed back on the next run: the plugin owns the
   name. Change the prefix or a setting instead.
 - Playlists from an older version are adopted only if they look like ours: the

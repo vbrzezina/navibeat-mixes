@@ -200,7 +200,9 @@ func TestEnsureMixCreatesAndCachesWhenNothingMatches(t *testing.T) {
 	if err := c.SetComment(id, marker("loved", "loved")); err != nil {
 		t.Fatal(err)
 	}
-	again, _, _ := c.EnsureMix("loved", "loved", "Renamed", "Loved")
+	// The legacy name matches nothing, so only the marker SetComment just wrote
+	// into the cache can lead back to this playlist.
+	again, _, _ := c.EnsureMix("loved", "loved", "Renamed", "Some other legacy name")
 	if again != "new1" || len(s.creates) != 1 {
 		t.Errorf("again=%q creates=%v", again, s.creates)
 	}

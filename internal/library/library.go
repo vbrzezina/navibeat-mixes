@@ -661,7 +661,7 @@ func (c *Client) WriteMix(id string, created bool, trackIDs []string, comment st
 // rewrite, and more of them piled up each night.
 //
 // The server checks that the caller owns the playlist (or is an admin) and
-// refuses a smart or synced playlist. EnsurePlaylist only hands back
+// refuses a smart or synced playlist. EnsureMix and EnsurePlaylist only hand back
 // playlists owned by this client's user, so the first holds. An empty list is
 // never sent: Navidrome's Put skips the track rewrite when there are no tracks,
 // so it would leave the old contents in place, and writeNamed already refuses

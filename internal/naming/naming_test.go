@@ -110,49 +110,76 @@ func TestCollisionWithAnEarlierDefaultName(t *testing.T) {
 	}
 }
 
-// F5: the fallback is checked too. A genre called "Morning" (template
-// "{subject}") takes the name the fixed time-of-day mix has, and that mix's
-// default is the same name, so it must not end up duplicated.
-func TestCollisionFallbackTakenByAFixedNameMix(t *testing.T) {
-	items := []Item{
-		{Name: "P Morning", Default: "P Genre Radio 1"},
-		{Name: "P Morning", Default: "P Morning"}, // add(): name equals default
+// A fixed name always wins, in either plan order: a genre called "Morning"
+// (template "{subject}") must not push the real Morning mix to "Morning (2)".
+func TestFixedNameWinsOverATemplatedOneInEitherOrder(t *testing.T) {
+	templated := Item{Name: "P Morning", Default: "P Genre Radio 1"}
+	fixed := Item{Name: "P Morning", Default: "P Morning"} // add(): name equals default
+	for _, items := range [][]Item{{templated, fixed}, {fixed, templated}} {
+		got := ResolveCollisions(items)
+		want := []string{"P Genre Radio 1", "P Morning"}
+		if items[0] == fixed {
+			want = []string{"P Morning", "P Genre Radio 1"}
+		}
+		if got[0] != want[0] || got[1] != want[1] {
+			t.Errorf("order %v: got %v want %v", items, got, want)
+		}
 	}
+}
+
+// Two fixed names that clash keep their names, as upstream did (a user who
+// gives two mixes the same name asked for it).
+func TestTwoFixedNamesAreLeftAlone(t *testing.T) {
+	items := []Item{{Name: "P X", Default: "P X"}, {Name: "P X", Default: "P X"}}
 	got := ResolveCollisions(items)
-	if got[0] != "P Morning" || got[1] != "P Morning (2)" {
+	if got[0] != "P X" || got[1] != "P X" {
 		t.Errorf("got %v", got)
 	}
 }
 
-// F5: a template that renders exactly another mix's default name.
-func TestCollisionFallbackTakenByARenderedDefaultName(t *testing.T) {
+// A template that renders exactly a fixed mix's default name steps aside, and
+// two templated claimants take their own defaults.
+func TestTemplatedNameEqualToAFixedDefaultStepsAside(t *testing.T) {
 	items := []Item{
 		{Name: "P Daily Mix 1", Default: "P Genre Radio 1"}, // template gave "Daily Mix 1"
-		{Name: "P Daily Mix 1", Default: "P Daily Mix 1"},
-		{Name: "P Daily Mix 1", Default: "P Daily Mix 1"}, // a third claimant
+		{Name: "P Daily Mix 1", Default: "P Daily Mix 1"},   // the real Daily Mix 1
+		{Name: "P Daily Mix 1", Default: "P Genre Radio 2"}, // a second template claimant
 	}
 	got := ResolveCollisions(items)
-	want := []string{"P Daily Mix 1", "P Daily Mix 1 (2)", "P Daily Mix 1 (3)"}
+	want := []string{"P Genre Radio 1", "P Daily Mix 1", "P Genre Radio 2"}
 	for i := range want {
 		if got[i] != want[i] {
 			t.Errorf("item %d = %q, want %q", i, got[i], want[i])
 		}
 	}
-	seen := map[string]bool{}
-	for _, n := range got {
-		if seen[n] {
-			t.Errorf("duplicate name %q in %v", n, got)
-		}
-		seen[n] = true
+}
+
+// The fallback can be taken too (by a fixed mix): then a numeric suffix is
+// added so no two mixes share a name.
+func TestFallbackAlsoTakenGetsASuffix(t *testing.T) {
+	items := []Item{
+		{Name: "P Morning", Default: "P Morning"},             // fixed
+		{Name: "P Genre Radio 1", Default: "P Genre Radio 1"}, // fixed, holds the default below
+		{Name: "P Morning", Default: "P Genre Radio 1"},       // templated, both names taken
+	}
+	got := ResolveCollisions(items)
+	if got[2] != "P Genre Radio 1 (2)" {
+		t.Errorf("got %v", got)
 	}
 }
 
-// F5: the suffix goes on after the cut, so a 100 character default keeps it.
+// The suffix goes on after the cut, so a 100 character default keeps it.
 func TestCollisionSuffixIsNeverCutOff(t *testing.T) {
 	long := "P " + strings.Repeat("x", MaxLen)
-	got := ResolveCollisions([]Item{{Name: long, Default: long}, {Name: long, Default: long}})
-	if got[1] != long+" (2)" {
-		t.Errorf("got %q", got[1])
+	other := "P " + strings.Repeat("y", MaxLen)
+	items := []Item{
+		{Name: long, Default: long},
+		{Name: other, Default: other},
+		{Name: long, Default: other}, // templated: both names taken
+	}
+	got := ResolveCollisions(items)
+	if got[2] != other+" (2)" {
+		t.Errorf("got %q", got[2])
 	}
 }
 

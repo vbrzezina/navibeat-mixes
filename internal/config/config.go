@@ -95,7 +95,7 @@ type Config struct {
 	// so the mixes can speak the user's language.
 	SlotNames map[string]string
 	// NameTemplates holds the optional {subject} name template per mix family,
-	// keyed by kind ("artistradio", "dailymix", "genreradio", "decade"). A
+	// keyed by kind ("artistradio", "genreradio", "decade"). A
 	// family with no entry keeps its numbered default name. The template is
 	// rendered by the naming package; the prefix is added after.
 	NameTemplates map[string]string

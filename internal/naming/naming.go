@@ -87,22 +87,32 @@ type Item struct {
 // ResolveCollisions returns the final name of every item, in order.
 //
 // Two mixes with the same name would be two playlists a person cannot tell
-// apart, and the one written second would look like it replaced the first. So
-// when a name equals one already taken earlier in the plan, that later mix
-// uses its default instead. The plan order is fixed, so the same library
-// always resolves the same way and a playlist does not flip names night to
-// night.
+// apart. A mix whose name is fixed (Name equals Default: Morning, Daily Mix 1,
+// New Music) always keeps it, exactly as upstream, and its name is reserved
+// first. A mix named from a template then gives way: when its name is already
+// taken it uses its numbered default instead. So a genre literally called
+// "Morning" cannot push the real Morning mix to "Morning (2)" and back again
+// when the weekly rotation moves.
 //
-// The default can be taken too: by a fixed-name mix (a genre literally called
-// "Morning" against the time-of-day mix of that name) or by a template that
-// renders exactly another mix's default ("Daily Mix 1"). Then " (2)", " (3)"
-// and so on is appended to the default until the name is free. The suffix is
-// added to the finished name, after the 100 character cut and the prefix, so
-// it can never be cut off.
+// Among templated mixes the plan order decides, which is fixed, so the same
+// library always resolves the same way. The default can be taken too, by a
+// template that renders exactly another mix's default ("Daily Mix 1"). Then
+// " (2)", " (3)" and so on is appended to the default until the name is free.
+// The suffix is added to the finished name, after the 100 character cut and
+// the prefix, so it can never be cut off.
 func ResolveCollisions(items []Item) []string {
 	taken := make(map[string]bool, len(items))
+	for _, it := range items {
+		if it.Name == it.Default {
+			taken[it.Name] = true
+		}
+	}
 	out := make([]string, len(items))
 	for i, it := range items {
+		if it.Name == it.Default {
+			out[i] = it.Name
+			continue
+		}
 		name := it.Name
 		if taken[name] {
 			name = it.Default

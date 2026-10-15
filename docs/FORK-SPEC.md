@@ -89,19 +89,25 @@ Acceptance criteria:
   characters without splitting a multi-byte character. The configured prefix is
   added after rendering and is not counted in the 100.
 - **S2-4** If the cleaned result is empty, the default name is used.
-- **S2-5** Collisions: if a rendered name (prefix included) equals the name of an
-  earlier mix in the same run, the later mix uses its default numbered name
-  instead; if that is taken too, " (2)", " (3)" and so on is appended to it.
-  The suffix is added after the 100 character cut and the prefix, so it is
-  never cut off. Order is the plan order, so the result is deterministic.
+- **S2-5** Collisions: a mix with a fixed name (name equals default: Morning,
+  Daily Mix N, New Music, ...) always keeps it, exactly as upstream, and its name
+  is reserved first. If the name rendered from a template equals a reserved name
+  or the name of an earlier templated mix in the same run, that mix uses its
+  default numbered name instead; if that is taken too, " (2)", " (3)" and so on
+  is appended to it. The suffix is added after the 100 character cut and the
+  prefix, so it is never cut off. Order is the plan order, so the result is
+  deterministic, and a rotating template can never push a fixed mix to a new name.
 - **S2-6** The description text is unchanged (it keeps naming the subject). A
   subject is cleaned (naming.Subject: control characters and line breaks become
   spaces, cut to 100 characters) before it enters a name or a sentence, so a
   tag cannot inject a machine line.
 - **S2-7** The existing time-of-day and Rediscover name settings keep working.
 - **S2-8** Daily Mix has no name setting: it keeps its fixed name "Daily Mix N".
-  Its description sentence is still cleaned (naming.Sentence) and its name takes
-  part in the collision step like any fixed name.
+  Its description sentence is still cleaned (naming.Sentence) and its name is
+  reserved in the collision step like any fixed name.
+- **S2-9** Settings removed in phase 1 (`size*`, `lovedMaxPerArtist`,
+  `nameDailyMix`) may still be saved in an install that had them; they are
+  ignored without an error.
 
 ## Story 3: per-mix size and per-artist override (dropped in phase 1)
 

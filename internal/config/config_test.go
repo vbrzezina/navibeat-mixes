@@ -376,7 +376,7 @@ func TestBudgetSecondsIsClampedUnderTheHostDeadline(t *testing.T) {
 	}
 }
 
-// S2-1, S2-2, S2-3: the templates are read from the four new settings, the
+// S2-1, S2-2, S2-3: the templates are read from the three name settings, the
 // prefix is added after rendering, and an unset family keeps its default.
 func TestNameTemplatesAreReadAndRendered(t *testing.T) {
 	c := Load(getterFrom(map[string]string{
@@ -390,7 +390,7 @@ func TestNameTemplatesAreReadAndRendered(t *testing.T) {
 	if got := c.SubjectName("genreradio", "Punk", "Genre Radio 1"); got != "P Punk Radio" {
 		t.Errorf("genre radio: %q", got)
 	}
-	if got := c.SubjectName("dailymix", "Billy Talent", "Daily Mix 1"); got != "P Daily Mix 1" {
+	if got := c.SubjectName("dailymix", "Billy Talent", "Daily Mix 1"); got != "P Daily Mix 1" /* a kind with no setting keeps its default */ {
 		t.Errorf("an unset template changed the name: %q", got)
 	}
 	if got := c.SubjectName("decade", "1990s", "1990s"); got != "P 1990s" {

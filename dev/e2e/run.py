@@ -304,7 +304,7 @@ def main():
     check("S1-3 subject rotation renames in place", set(after) == set(before) and len(after) == len(before),
           f"same id set={set(after) == set(before)}; {len(changed)} renamed e.g. {changed[:3]}")
 
-    # ---- 6. sizes and the loved cap
+    # ---- 6. sizes stay as upstream (Loved keeps the global limits; retired settings are ignored)
     arts = list(by_artist)[:7]
     star_ids = [s["id"] for a in arts for s in by_artist[a]]
     call("star", id=star_ids)
