@@ -181,8 +181,8 @@ has one placeholder, `{subject}`:
 
 | Setting | Subject | Example | Result |
 |---|---|---|---|
-| Name: Artist Radio | the artist | `This is {subject}` | `This is Billy Talent` |
-| Name: Genre Radio | the genre | `{subject} Radio` | `Punk Radio` |
+| Name: Artist Radio | the artist | `Radio: {subject}` | `Radio: Billy Talent` |
+| Name: Genre Radio | the genre | `{subject} Mix` | `Punk Mix` |
 | Name: Decade | the decade | `{subject} Hits` | `1990s Hits` |
 
 - Empty (the default) keeps the usual names: `Artist Radio 1`, `Genre Radio 3`,

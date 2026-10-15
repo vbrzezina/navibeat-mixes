@@ -143,7 +143,7 @@
           "type": "string",
           "title": "Name: Genre Radio",
           "default": "",
-          "description": "Use {subject} for the genre, for example \"Radio: {subject}\". Leave empty for \"Genre Radio 1\"."
+          "description": "Use {subject} for the genre, for example \"{subject} Mix\". Leave empty for \"Genre Radio 1\"."
         },
         "nameDecade": {
           "type": "string",
