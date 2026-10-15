@@ -7,3 +7,5 @@ dev/data/
 dev/plugins/
 dev/music/
 dev/cache/
+dev/data-*/
+dev/plugins-*/
