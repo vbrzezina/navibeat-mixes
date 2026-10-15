@@ -116,8 +116,7 @@ def up():
     time.sleep(2)
     sh("docker", "start", NAME)
     time.sleep(15)
-    sh("docker", "exec", NAME, "sqlite3", "/data/navidrome.db",
-       "update plugin set enabled=1, all_users=1, all_libraries=1 where id='navibeat-mixes';")
+    sql("update plugin set enabled=1, all_users=1, all_libraries=1 where id='navibeat-mixes';")
     sh("docker", "restart", NAME)
     time.sleep(20)
     # wait for the library scan so there are tracks to work with
@@ -131,9 +130,23 @@ def up():
     raise RuntimeError("library did not load")
 
 
+def sql(statement):
+    """Run one statement in the container's database. The sqlite3 CLI has no busy
+    timeout by default and Navidrome keeps the file busy while it scans or
+    generates, so wait for the lock and retry instead of failing the run."""
+    last = ""
+    for _ in range(5):
+        r = subprocess.run(["docker", "exec", NAME, "sqlite3", "/data/navidrome.db", ".timeout 20000", statement],
+                           capture_output=True, text=True)
+        if r.returncode == 0:
+            return r.stdout
+        last = r.stderr
+        time.sleep(5)
+    raise RuntimeError(f"sqlite3 failed after retries: {last}")
+
+
 def set_cfg(cfg):
-    sh("docker", "exec", NAME, "sqlite3", "/data/navidrome.db",
-       "update plugin set config='" + json.dumps(cfg) + "' where id='navibeat-mixes';", check=True)
+    sql("update plugin set config='" + json.dumps(cfg) + "' where id='navibeat-mixes';")
 
 
 def regen(cfg=None):
