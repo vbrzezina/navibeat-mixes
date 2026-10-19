@@ -271,8 +271,10 @@ def main():
         check("S2-2 genre radio name", gv is not None and gv["name"] == f"QA {gsub} Mix", f"{gv['name']!r} genre={gsub!r}")
         dm = sorted(v["name"] for v in mine(d).values() if v["slot"] and v["slot"].startswith("dailymix:"))
         check("S2-8 Daily Mix keeps its fixed numbered name", dm == ["QA Daily Mix 1", "QA Daily Mix 2", "QA Daily Mix 3"], dm)
-        dk, dv = byslot(d, "decade:decade-1990")
-        check("S2-2 decade name", dv is not None and dv["name"] == "QA 1990s Hits", repr(dv and dv["name"]))
+        # The decades shown rotate weekly, so check whichever ones are in this week's rotation.
+        decades = {v["slot"]: v["name"] for v in mine(d).values() if (v["slot"] or "").startswith("decade:decade-")}
+        want = {slot: f"QA {slot.split('-')[1]}s Hits" for slot in decades}
+        check("S2-2 decade names", bool(decades) and decades == want, decades)
         check("S2-6 description keeps the subject", bool(v1 and "everything you have by" in v1["comment"]), (v1 or {}).get("comment", "").split("\n")[0])
         nk, nv = byslot(d, "newmusic:newmusic")
         check("S2-1 untemplated mixes keep default names", nv and nv["name"] == "QA New Music", repr(nv and nv["name"]))
