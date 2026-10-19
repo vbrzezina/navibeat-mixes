@@ -134,6 +134,9 @@ func TestNameSettingsAreDeclaredAndGrouped(t *testing.T) {
 		if !inGroup[k] {
 			t.Errorf("%s is not in the Names group", k)
 		}
+		if !strings.HasPrefix(p.Title, "Name: ") {
+			t.Errorf("%s: title %q must start with \"Name: \"", k, p.Title)
+		}
 		if strings.Contains(strings.ToLower(p.Title), "template") {
 			t.Errorf("%s: title %q must not say template", k, p.Title)
 		}

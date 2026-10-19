@@ -376,38 +376,32 @@ func TestBudgetSecondsIsClampedUnderTheHostDeadline(t *testing.T) {
 	}
 }
 
-// S2-1, S2-2, S2-3: the templates are read from the three name settings, the
-// prefix is added after rendering, and an unset family keeps its default.
-func TestNameTemplatesAreReadAndRendered(t *testing.T) {
+func TestNameTemplatesAreReadTrimmedAndGetThePrefixAfterRendering(t *testing.T) {
 	c := Load(getterFrom(map[string]string{
 		"nameArtistRadio": "This is {subject}",
 		"nameGenreRadio":  "  {subject} Radio ",
+		"nameDecade":      "{subject}",
 		"prefix":          "P",
 	}))
-	if got := c.SubjectName("artistradio", "Billy Talent", "Artist Radio 1"); got != "P This is Billy Talent" {
-		t.Errorf("artist radio: %q", got)
+	cases := []struct{ kind, subject, def, want string }{
+		{"artistradio", "Billy Talent", "Artist Radio 1", "P This is Billy Talent"},
+		{"genreradio", "Punk", "Genre Radio 1", "P Punk Radio"},
+		{"dailymix", "Billy Talent", "Daily Mix 1", "P Daily Mix 1"}, // no setting for this kind
+		// The prefix is not part of the 100 character cut.
+		{"decade", strings.Repeat("x", 150), "d", "P " + strings.Repeat("x", 100)},
 	}
-	if got := c.SubjectName("genreradio", "Punk", "Genre Radio 1"); got != "P Punk Radio" {
-		t.Errorf("genre radio: %q", got)
-	}
-	if got := c.SubjectName("dailymix", "Billy Talent", "Daily Mix 1"); got != "P Daily Mix 1" /* a kind with no setting keeps its default */ {
-		t.Errorf("an unset template changed the name: %q", got)
-	}
-	if got := c.SubjectName("decade", "1990s", "1990s"); got != "P 1990s" {
-		t.Errorf("an unset decade template changed the name: %q", got)
-	}
-}
-
-func TestPrefixIsNotCountedInTheHundredCharacterCut(t *testing.T) {
-	c := Load(getterFrom(map[string]string{"nameDecade": "{subject}", "prefix": "PREFIX"}))
-	long := strings.Repeat("x", 150)
-	if got := c.SubjectName("decade", long, "d"); len([]rune(got)) != len("PREFIX ")+100 {
-		t.Errorf("length %d", len([]rune(got)))
+	for _, tc := range cases {
+		if got := c.SubjectName(tc.kind, tc.subject, tc.def); got != tc.want {
+			t.Errorf("%s: got %q, want %q", tc.kind, got, tc.want)
+		}
 	}
 }
 
 func TestDefaultsHaveNoNameTemplates(t *testing.T) {
 	if n := len(Defaults().NameTemplates); n != 0 {
 		t.Errorf("%d templates set by default", n)
+	}
+	if got := Load(getterFrom(nil)).SubjectName("artistradio", "X", "Artist Radio 1"); got != Defaults().Prefix+"Artist Radio 1" {
+		t.Errorf("default name changed: %q", got)
 	}
 }
