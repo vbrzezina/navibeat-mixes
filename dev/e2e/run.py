@@ -8,6 +8,7 @@ test library in dev/music. Talks only to 127.0.0.1:4544. Never touches a real
 server. Results are printed; nothing is written to the repo.
 """
 import json
+import os
 import subprocess
 import sys
 import time
@@ -17,6 +18,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 VER = sys.argv[1]
+# E2E_SCOPE=identity tests the identity branch alone (no name templates);
+# E2E_NDP=/path/to/plugin.ndp tests a plugin other than the repo root build.
+IDENT = os.environ.get("E2E_SCOPE") == "identity"
 ROOT = Path(__file__).resolve().parents[2]
 DEV = ROOT / "dev"
 NAME = f"nd-dev-{VER}"
@@ -102,7 +106,7 @@ def up():
     sh("docker", "run", "--rm", "-v", f"{DEV}:/d", "alpine", "sh", "-c", f"rm -rf /d/{DATA.name} /d/{PLUGINS.name}")
     for sub in (DATA, PLUGINS):
         sub.mkdir(parents=True, exist_ok=True)
-    sh("cp", str(ROOT / "navibeat-mixes.ndp"), str(PLUGINS))
+    sh("cp", os.environ.get("E2E_NDP", str(ROOT / "navibeat-mixes.ndp")), str(PLUGINS))
     sh("docker", "run", "-d", "--name", NAME, "-p", f"127.0.0.1:{PORT}:4533",
        "-v", f"{DEV}/music:/music:ro", "-v", f"{DATA}:/data", "-v", f"{PLUGINS}:/plugins",
        "-e", "ND_LOGLEVEL=debug", "-e", "ND_PLUGINS_ENABLED=true", "-e", "ND_PLUGINS_FOLDER=/plugins",
@@ -245,47 +249,53 @@ def main():
 
     # ---- hand-made not adopted (F1) comes later with templates
 
-    # ---- 4. templates
-    cfg = {"prefix": "QA ", "nameArtistRadio": "Radio: {subject}", "nameGenreRadio": "{subject} Mix",
-           "nameDecade": "{subject} Hits"}
-    regen(cfg)
-    d = snap()
-    dump("templates", d)
-    ids_now = {k for k, v in mine(d).items() if v["slot"]}
-    check("S1-3 ids unchanged by templates", ids_now == base_ids, f"same={ids_now == base_ids}")
-    k1, v1 = byslot(d, "artistradio:artistradio-1")
-    subj = v1["comment"].split("everything you have by ")[1].split(".")[0] if v1 and "everything you have by " in v1["comment"] else None
-    check("S2-2 artist radio name from subject", bool(v1 and subj and v1["name"] == f"QA Radio: {subj}"), f"{v1 and v1['name']!r} subject={subj!r}")
-    gk, gv = byslot(d, "genreradio:genreradio-1")
-    gsub = gv["comment"].split("NaviBeat Mixes: ")[1].split(",")[0] if gv else None
-    check("S2-2 genre radio name", gv is not None and gv["name"] == f"QA {gsub} Mix", f"{gv['name']!r} genre={gsub!r}")
-    dm = sorted(v["name"] for v in mine(d).values() if v["slot"] and v["slot"].startswith("dailymix:"))
-    check("S2-8 Daily Mix keeps its fixed numbered name", dm == ["QA Daily Mix 1", "QA Daily Mix 2", "QA Daily Mix 3"], dm)
-    dk, dv = byslot(d, "decade:decade-1990")
-    check("S2-2 decade name", dv is not None and dv["name"] == "QA 1990s Hits", repr(dv and dv["name"]))
-    check("S2-6 description keeps the subject", bool(v1 and "everything you have by" in v1["comment"]), (v1 or {}).get("comment", "").split("\n")[0])
-    nk, nv = byslot(d, "newmusic:newmusic")
-    check("S2-1 untemplated mixes keep default names", nv and nv["name"] == "QA New Music", repr(nv and nv["name"]))
-    # F1: the hand made playlist survived untouched
-    hm = d.get(keep)
-    check("F1 hand-made playlist not adopted", hm and hm["slot"] is None and hm["n"] == 3 and "hands off" in hm["comment"] and hm["name"] == "QA Punk Mix",
-          f"{hm and (hm['name'], hm['n'], hm['slot'])}")
-    names = [v["name"] for v in mine(d).values()]
-    # the plugin made its own 'QA Punk Mix' (genre radio) next to the hand-made one: two same-named is expected
-    check("F1 plugin made its own playlist next to it", sum(1 for n in names if n == "QA Punk Mix") in (1, 2), f"'QA Punk Mix' count {names.count('QA Punk Mix')}")
+    if IDENT:
+        # identity branch alone: no name templates exist, so the name checks are skipped
+        cfg = {"prefix": "QA "}
+        regen(cfg)
+        d = snap()
+    else:
+        # ---- 4. templates
+        cfg = {"prefix": "QA ", "nameArtistRadio": "Radio: {subject}", "nameGenreRadio": "{subject} Mix",
+               "nameDecade": "{subject} Hits"}
+        regen(cfg)
+        d = snap()
+        dump("templates", d)
+        ids_now = {k for k, v in mine(d).items() if v["slot"]}
+        check("S1-3 ids unchanged by templates", ids_now == base_ids, f"same={ids_now == base_ids}")
+        k1, v1 = byslot(d, "artistradio:artistradio-1")
+        subj = v1["comment"].split("everything you have by ")[1].split(".")[0] if v1 and "everything you have by " in v1["comment"] else None
+        check("S2-2 artist radio name from subject", bool(v1 and subj and v1["name"] == f"QA Radio: {subj}"), f"{v1 and v1['name']!r} subject={subj!r}")
+        gk, gv = byslot(d, "genreradio:genreradio-1")
+        gsub = gv["comment"].split("NaviBeat Mixes: ")[1].split(",")[0] if gv else None
+        check("S2-2 genre radio name", gv is not None and gv["name"] == f"QA {gsub} Mix", f"{gv['name']!r} genre={gsub!r}")
+        dm = sorted(v["name"] for v in mine(d).values() if v["slot"] and v["slot"].startswith("dailymix:"))
+        check("S2-8 Daily Mix keeps its fixed numbered name", dm == ["QA Daily Mix 1", "QA Daily Mix 2", "QA Daily Mix 3"], dm)
+        dk, dv = byslot(d, "decade:decade-1990")
+        check("S2-2 decade name", dv is not None and dv["name"] == "QA 1990s Hits", repr(dv and dv["name"]))
+        check("S2-6 description keeps the subject", bool(v1 and "everything you have by" in v1["comment"]), (v1 or {}).get("comment", "").split("\n")[0])
+        nk, nv = byslot(d, "newmusic:newmusic")
+        check("S2-1 untemplated mixes keep default names", nv and nv["name"] == "QA New Music", repr(nv and nv["name"]))
+        # F1: the hand made playlist survived untouched
+        hm = d.get(keep)
+        check("F1 hand-made playlist not adopted", hm and hm["slot"] is None and hm["n"] == 3 and "hands off" in hm["comment"] and hm["name"] == "QA Punk Mix",
+              f"{hm and (hm['name'], hm['n'], hm['slot'])}")
+        names = [v["name"] for v in mine(d).values()]
+        # the plugin made its own 'QA Punk Mix' (genre radio) next to the hand-made one: two same-named is expected
+        check("F1 plugin made its own playlist next to it", sum(1 for n in names if n == "QA Punk Mix") in (1, 2), f"'QA Punk Mix' count {names.count('QA Punk Mix')}")
 
-    # ---- collision (S2-5): a template without a placeholder gives every genre radio the same name
-    cfg2 = dict(cfg, nameGenreRadio="Radio")
-    regen(cfg2)
-    d = snap()
-    dump("collision", d)
-    plug = {k: v for k, v in mine(d).items() if v["slot"]}
-    nm = [v["name"] for v in plug.values()]
-    dupn = sorted({n for n in nm if nm.count(n) > 1})
-    check("S2-5 no two plugin playlists share a name", not dupn, f"duplicates={dupn}")
-    gen = sorted(v["name"] for v in plug.values() if v["slot"].startswith("genreradio:"))
-    check("S2-5 first keeps the name, the others fall back to numbered defaults", gen == ["QA Genre Radio 2", "QA Genre Radio 3", "QA Radio"], gen)
-    check("S1-1 ids stable across the collision flip", set(plug) == base_ids, f"same={set(plug) == base_ids}")
+        # ---- collision (S2-5): a template without a placeholder gives every genre radio the same name
+        cfg2 = dict(cfg, nameGenreRadio="Radio")
+        regen(cfg2)
+        d = snap()
+        dump("collision", d)
+        plug = {k: v for k, v in mine(d).items() if v["slot"]}
+        nm = [v["name"] for v in plug.values()]
+        dupn = sorted({n for n in nm if nm.count(n) > 1})
+        check("S2-5 no two plugin playlists share a name", not dupn, f"duplicates={dupn}")
+        gen = sorted(v["name"] for v in plug.values() if v["slot"].startswith("genreradio:"))
+        check("S2-5 first keeps the name, the others fall back to numbered defaults", gen == ["QA Genre Radio 2", "QA Genre Radio 3", "QA Radio"], gen)
+        check("S1-1 ids stable across the collision flip", set(plug) == base_ids, f"same={set(plug) == base_ids}")
 
     # ---- F2: a copy carrying the marker must not hijack the original
     ok_, ov = byslot(d, "artistradio:artistradio-1")
