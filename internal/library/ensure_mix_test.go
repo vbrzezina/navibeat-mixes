@@ -65,24 +65,24 @@ func marker(kind, slot string) string {
 	return protocol.Format("human", protocol.Meta{Kind: kind, Slot: slot, Date: "2026-01-01", Mode: "affinity", Count: 30})
 }
 
-// found by marker although the name differs, same id, renamed.
+// S1-1, S1-3: found by marker although the name differs, same id, renamed.
 func TestEnsureMixFindsByMarkerAndRenamesInPlace(t *testing.T) {
 	s := &mixServer{lists: []Playlist{
 		{ID: "a1", Name: "Old Prefix Artist Radio 1", Owner: "bob", Comment: marker("artistradio", "artistradio-1")},
 	}}
 	c := New(s.call, "bob")
-	id, _, err := c.EnsureMix("artistradio", "artistradio-1", "New Prefix Artist Radio 1")
+	id, _, err := c.EnsureMix("artistradio", "artistradio-1", "New Prefix This is Billy Talent", "New Prefix Artist Radio 1")
 	if err != nil || id != "a1" {
 		t.Fatalf("id=%q err=%v", id, err)
 	}
-	if s.renames["a1"] != "New Prefix Artist Radio 1" {
+	if s.renames["a1"] != "New Prefix This is Billy Talent" {
 		t.Errorf("rename not sent: %v", s.renames)
 	}
 	if len(s.creates) != 0 {
 		t.Errorf("a duplicate was created: %v", s.creates)
 	}
 	// The cache follows the rename, so a second call sends nothing.
-	if _, _, err := c.EnsureMix("artistradio", "artistradio-1", "New Prefix Artist Radio 1"); err != nil {
+	if _, _, err := c.EnsureMix("artistradio", "artistradio-1", "New Prefix This is Billy Talent", "New Prefix Artist Radio 1"); err != nil {
 		t.Fatal(err)
 	}
 	if len(s.renames) != 1 || s.count("updatePlaylist") != 1 {
@@ -95,7 +95,7 @@ func TestEnsureMixSkipsRenameWhenNameMatches(t *testing.T) {
 	s := &mixServer{lists: []Playlist{
 		{ID: "a1", Name: "Same", Owner: "bob", Comment: marker("loved", "loved")},
 	}}
-	if _, _, err := New(s.call, "bob").EnsureMix("loved", "loved", "Same"); err != nil {
+	if _, _, err := New(s.call, "bob").EnsureMix("loved", "loved", "Same", "Same"); err != nil {
 		t.Fatal(err)
 	}
 	if s.count("updatePlaylist") != 0 {
@@ -103,13 +103,13 @@ func TestEnsureMixSkipsRenameWhenNameMatches(t *testing.T) {
 	}
 }
 
-// a playlist from an older version, no marker, matched by exact name
+// S1-2: a playlist from an older version, no marker, matched by exact name
 // and adopted rather than duplicated.
 func TestEnsureMixAdoptsByNameWhenThereIsNoMarker(t *testing.T) {
 	s := &mixServer{lists: []Playlist{
 		{ID: "old", Name: "Daily Mix 1", Owner: "bob", Comment: "just a sentence"},
 	}}
-	id, _, err := New(s.call, "bob").EnsureMix("dailymix", "dailymix-1", "Daily Mix 1")
+	id, _, err := New(s.call, "bob").EnsureMix("dailymix", "dailymix-1", "Daily Mix 1", "Daily Mix 1")
 	if err != nil || id != "old" {
 		t.Fatalf("id=%q err=%v", id, err)
 	}
@@ -118,13 +118,13 @@ func TestEnsureMixAdoptsByNameWhenThereIsNoMarker(t *testing.T) {
 	}
 }
 
-// a playlist already marked as another mix is not adopted by
+// S1-2 corollary: a playlist already marked as another mix is not adopted by
 // name, it belongs to its own slot.
 func TestEnsureMixDoesNotStealAnotherMixByName(t *testing.T) {
 	s := &mixServer{lists: []Playlist{
 		{ID: "other", Name: "Punk Radio", Owner: "bob", Comment: marker("genreradio", "genreradio-2")},
 	}}
-	id, _, err := New(s.call, "bob").EnsureMix("genreradio", "genreradio-1", "Punk Radio")
+	id, _, err := New(s.call, "bob").EnsureMix("genreradio", "genreradio-1", "Punk Radio", "Genre Radio 1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,12 +136,12 @@ func TestEnsureMixDoesNotStealAnotherMixByName(t *testing.T) {
 	}
 }
 
-// another user's playlist never matches, by marker or by name.
+// S1-4: another user's playlist never matches, by marker or by name.
 func TestEnsureMixNeverMatchesAnotherUsersPlaylist(t *testing.T) {
 	s := &mixServer{lists: []Playlist{
 		{ID: "alice1", Name: "Morning", Owner: "alice", Comment: marker("timeofday", "morning")},
 	}}
-	id, _, err := New(s.call, "bob").EnsureMix("timeofday", "morning", "Morning")
+	id, _, err := New(s.call, "bob").EnsureMix("timeofday", "morning", "Morning", "Morning")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +156,7 @@ func TestEnsureMixNeverMatchesAnotherUsersPlaylist(t *testing.T) {
 	}
 }
 
-// duplicates carrying the same marker: the most recently changed wins,
+// S1-5: duplicates carrying the same marker: the most recently changed wins,
 // the others are untouched.
 func TestEnsureMixPicksMostRecentlyChangedAndLeavesTheRest(t *testing.T) {
 	s := &mixServer{lists: []Playlist{
@@ -164,7 +164,7 @@ func TestEnsureMixPicksMostRecentlyChangedAndLeavesTheRest(t *testing.T) {
 		{ID: "newest", Name: "B", Owner: "bob", Comment: marker("loved", "loved"), Changed: "2026-03-01T10:00:00Z"},
 		{ID: "mid", Name: "C", Owner: "bob", Comment: marker("loved", "loved"), Changed: "2026-02-01T10:00:00Z"},
 	}}
-	id, _, err := New(s.call, "bob").EnsureMix("loved", "loved", "Loved")
+	id, _, err := New(s.call, "bob").EnsureMix("loved", "loved", "Loved", "Loved")
 	if err != nil || id != "newest" {
 		t.Fatalf("id=%q err=%v", id, err)
 	}
@@ -173,13 +173,13 @@ func TestEnsureMixPicksMostRecentlyChangedAndLeavesTheRest(t *testing.T) {
 	}
 }
 
-// a failed rename is not an error; the id still comes back.
+// S1-6: a failed rename is not an error; the id still comes back.
 func TestEnsureMixFailedRenameStillReturnsThePlaylist(t *testing.T) {
 	s := &mixServer{failRename: true, lists: []Playlist{
 		{ID: "a1", Name: "Old", Owner: "bob", Comment: marker("loved", "loved")},
 	}}
 	c := New(s.call, "bob")
-	id, _, err := c.EnsureMix("loved", "loved", "New")
+	id, _, err := c.EnsureMix("loved", "loved", "New", "New")
 	if err != nil || id != "a1" {
 		t.Fatalf("id=%q err=%v", id, err)
 	}
@@ -193,16 +193,16 @@ func TestEnsureMixFailedRenameStillReturnsThePlaylist(t *testing.T) {
 func TestEnsureMixCreatesAndCachesWhenNothingMatches(t *testing.T) {
 	s := &mixServer{}
 	c := New(s.call, "bob")
-	id, created, err := c.EnsureMix("loved", "loved", "Loved")
+	id, created, err := c.EnsureMix("loved", "loved", "Loved", "Loved")
 	if err != nil || id != "new1" || !created {
 		t.Fatalf("id=%q created=%v err=%v", id, created, err)
 	}
 	if err := c.SetComment(id, marker("loved", "loved")); err != nil {
 		t.Fatal(err)
 	}
-	// The name Renamed matches nothing, so only the marker SetComment just wrote
+	// The legacy name matches nothing, so only the marker SetComment just wrote
 	// into the cache can lead back to this playlist.
-	again, _, _ := c.EnsureMix("loved", "loved", "Renamed")
+	again, _, _ := c.EnsureMix("loved", "loved", "Renamed", "Some other legacy name")
 	if again != "new1" || len(s.creates) != 1 {
 		t.Errorf("again=%q creates=%v", again, s.creates)
 	}
@@ -211,7 +211,7 @@ func TestEnsureMixCreatesAndCachesWhenNothingMatches(t *testing.T) {
 	}
 }
 
-// EnsurePlaylist and FindControl keep their behaviour.
+// S1-7: EnsurePlaylist and FindControl keep their behaviour.
 func TestEnsurePlaylistStillMatchesByNameAndOwner(t *testing.T) {
 	s := &mixServer{lists: []Playlist{
 		{ID: "x", Name: "N", Owner: "alice"},
