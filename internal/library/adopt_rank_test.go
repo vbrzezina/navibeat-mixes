@@ -4,54 +4,63 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/nenadjokic/navibeat-mixes/internal/protocol"
 )
 
-// An unmarked playlist that is called the wanted name is adopted (as
-// EnsurePlaylist always did), but one that only looks similar is not: a hand
-// made playlist with another name is never taken over and overwritten.
-func TestEnsureMixAdoptsOnlyAnUnmarkedPlaylistWithTheExactName(t *testing.T) {
+// F1: a template can render any name, so a hand made playlist that merely has
+// the same name must not be taken over and overwritten.
+func TestEnsureMixDoesNotAdoptAHandMadePlaylistThatOnlyHasTheName(t *testing.T) {
+	for _, comment := range []string{"", "my favourite punk songs"} {
+		s := &mixServer{lists: []Playlist{
+			{ID: "mine", Name: "Punk Radio", Owner: "bob", Comment: comment},
+		}}
+		id, created, err := New(s.call, "bob").EnsureMix("genreradio", "genreradio-1", "Punk Radio", "Genre Radio 1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if id == "mine" || !created || len(s.creates) != 1 {
+			t.Errorf("comment %q: adopted a hand made playlist (id=%q created=%v creates=%v)", comment, id, created, s.creates)
+		}
+	}
+}
+
+// F1: an unmarked playlist called the legacy default name is what 0.9.x
+// before the marker wrote; it is adopted and renamed to the template name.
+func TestEnsureMixAdoptsAnUnmarkedLegacyDefaultNamedPlaylist(t *testing.T) {
 	s := &mixServer{lists: []Playlist{
-		{ID: "close", Name: "Genre Radio 1 ", Owner: "bob", Comment: "hand typed"},
-		{ID: "case", Name: "genre radio 1", Owner: "bob"},
 		{ID: "old", Name: "Genre Radio 1", Owner: "bob", Comment: "hand typed"},
 	}}
-	id, created, err := New(s.call, "bob").EnsureMix("genreradio", "genreradio-1", "Genre Radio 1")
+	id, created, err := New(s.call, "bob").EnsureMix("genreradio", "genreradio-1", "Punk Radio", "Genre Radio 1")
 	if err != nil || id != "old" || created {
 		t.Fatalf("id=%q created=%v err=%v", id, created, err)
 	}
-	if len(s.renames) != 0 || len(s.creates) != 0 {
+	if s.renames["old"] != "Punk Radio" || len(s.creates) != 0 {
 		t.Errorf("renames=%v creates=%v", s.renames, s.creates)
 	}
-
-	s = &mixServer{lists: []Playlist{
-		{ID: "close", Name: "Genre Radio 1 ", Owner: "bob"},
-	}}
-	id, created, err = New(s.call, "bob").EnsureMix("genreradio", "genreradio-1", "Genre Radio 1")
-	if err != nil || id == "close" || !created || len(s.creates) != 1 {
-		t.Errorf("adopted a playlist with another name: id=%q created=%v err=%v", id, created, err)
-	}
 }
 
-// A mix you renamed by hand is found by its marker and renamed back.
-func TestEnsureMixRenamesAHandRenamedMixBack(t *testing.T) {
+// F1: an unmarked playlist with the plugin's attribution line is ours even if
+// its name is the rendered one.
+func TestEnsureMixAdoptsAnUnmarkedPlaylistCarryingTheAttribution(t *testing.T) {
 	s := &mixServer{lists: []Playlist{
-		{ID: "mine", Name: "my own title", Owner: "bob", Comment: marker("loved", "loved")},
+		{ID: "ours", Name: "Punk Radio", Owner: "bob", Comment: "a sentence\n" + protocol.Attribution},
 	}}
-	id, created, err := New(s.call, "bob").EnsureMix("loved", "loved", "Loved Songs")
-	if err != nil || id != "mine" || created || s.renames["mine"] != "Loved Songs" || len(s.creates) != 0 {
-		t.Errorf("id=%q created=%v err=%v renames=%v creates=%v", id, created, err, s.renames, s.creates)
+	id, created, err := New(s.call, "bob").EnsureMix("genreradio", "genreradio-1", "Punk Radio", "Genre Radio 1")
+	if err != nil || id != "ours" || created {
+		t.Fatalf("id=%q created=%v err=%v", id, created, err)
 	}
 }
 
-// Copies carry the marker too. Tier 1: the one already called the wanted name
-// wins even though a copy is newer.
+// F2: copies carry the marker too. Tier 1: the one already called the wanted
+// name wins even though a copy is newer.
 func TestFindByMarkerPrefersTheWantedName(t *testing.T) {
 	s := &mixServer{lists: []Playlist{
 		{ID: "copy", Name: "My copy", Owner: "bob", Comment: marker("loved", "loved"), Changed: "2026-05-01T10:00:00Z"},
-		{ID: "other", Name: "Another copy", Owner: "bob", Comment: marker("loved", "loved"), Changed: "2026-04-01T10:00:00Z"},
+		{ID: "legacy", Name: "Your Loved Songs", Owner: "bob", Comment: marker("loved", "loved"), Changed: "2026-04-01T10:00:00Z"},
 		{ID: "real", Name: "Loved", Owner: "bob", Comment: marker("loved", "loved"), Changed: "2026-01-01T10:00:00Z"},
 	}}
-	id, _, err := New(s.call, "bob").EnsureMix("loved", "loved", "Loved")
+	id, _, err := New(s.call, "bob").EnsureMix("loved", "loved", "Loved", "Your Loved Songs")
 	if err != nil || id != "real" {
 		t.Fatalf("id=%q err=%v", id, err)
 	}
@@ -60,13 +69,26 @@ func TestFindByMarkerPrefersTheWantedName(t *testing.T) {
 	}
 }
 
-// Tier 2: nothing is named right, so recency decides: changed, then
+// F2 tier 2: no playlist has the wanted name, the one with the legacy default
+// name wins over a newer copy.
+func TestFindByMarkerPrefersTheLegacyNameOverANewerCopy(t *testing.T) {
+	s := &mixServer{lists: []Playlist{
+		{ID: "copy", Name: "My copy", Owner: "bob", Comment: marker("loved", "loved"), Changed: "2026-05-01T10:00:00Z"},
+		{ID: "legacy", Name: "Your Loved Songs", Owner: "bob", Comment: marker("loved", "loved"), Changed: "2026-01-01T10:00:00Z"},
+	}}
+	id, _, err := New(s.call, "bob").EnsureMix("loved", "loved", "Loved", "Your Loved Songs")
+	if err != nil || id != "legacy" {
+		t.Fatalf("id=%q err=%v", id, err)
+	}
+}
+
+// F2 tier 3: nothing is named right, so recency decides: changed, then
 // created, then list order.
 func TestFindByMarkerFallsBackToChangedThenCreatedThenListOrder(t *testing.T) {
 	m := marker("loved", "loved")
 	pick := func(lists ...Playlist) string {
 		s := &mixServer{lists: lists}
-		id, _, err := New(s.call, "bob").EnsureMix("loved", "loved", "Loved")
+		id, _, err := New(s.call, "bob").EnsureMix("loved", "loved", "Loved", "Loved")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -92,7 +114,7 @@ func TestFindByMarkerFallsBackToChangedThenCreatedThenListOrder(t *testing.T) {
 	}
 }
 
-// A rename onto a name another of the owner's playlists already has is
+// F6: a rename onto a name another of the owner's playlists already has is
 // still done (Navidrome allows duplicate names) but is logged with both ids.
 func TestEnsureMixLogsWhenTheRenameTargetIsAlreadyTaken(t *testing.T) {
 	var lines []string
@@ -103,7 +125,7 @@ func TestEnsureMixLogsWhenTheRenameTargetIsAlreadyTaken(t *testing.T) {
 		{ID: "other", Name: "Punk Radio", Owner: "bob", Comment: marker("genreradio", "genreradio-2")},
 		{ID: "alices", Name: "Punk Radio", Owner: "alice"},
 	}}
-	if _, _, err := New(s.call, "bob").EnsureMix("genreradio", "genreradio-1", "Punk Radio"); err != nil {
+	if _, _, err := New(s.call, "bob").EnsureMix("genreradio", "genreradio-1", "Punk Radio", "Genre Radio 1"); err != nil {
 		t.Fatal(err)
 	}
 	if s.renames["mine"] != "Punk Radio" {

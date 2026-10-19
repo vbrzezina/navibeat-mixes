@@ -41,7 +41,7 @@ func tenIDs() []string {
 	return out
 }
 
-// a just created playlist gets its marker BEFORE the tracks.
+// F7: a just created playlist gets its marker BEFORE the tracks.
 func TestWriteMixWritesTheMarkerFirstForACreatedPlaylist(t *testing.T) {
 	s := &opServer{}
 	if err := New(s.call, "bob").WriteMix("p", true, tenIDs(), "c"); err != nil {
@@ -52,7 +52,7 @@ func TestWriteMixWritesTheMarkerFirstForACreatedPlaylist(t *testing.T) {
 	}
 }
 
-// if the marker cannot be written the slot fails and no tracks are sent,
+// F7: if the marker cannot be written the slot fails and no tracks are sent,
 // so the retry finds nothing half done. One immediate retry is allowed.
 func TestWriteMixFailsACreatedPlaylistWhoseMarkerCannotBeWritten(t *testing.T) {
 	s := &opServer{failComment: 2}
@@ -68,7 +68,7 @@ func TestWriteMixFailsACreatedPlaylistWhoseMarkerCannotBeWritten(t *testing.T) {
 	}
 }
 
-// an existing playlist keeps today's order, and a failed description is
+// F7: an existing playlist keeps today's order, and a failed description is
 // only logged.
 func TestWriteMixKeepsTodaysOrderAndLeniencyForAnExistingPlaylist(t *testing.T) {
 	s := &opServer{failComment: 1}

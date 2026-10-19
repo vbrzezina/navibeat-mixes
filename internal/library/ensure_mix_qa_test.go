@@ -97,7 +97,7 @@ func TestQAAdminSeesOthersAndOnlyTouchesOwn(t *testing.T) {
 	}}
 	// admin sees both; admin has none of its own
 	c := New(s.call, "admin")
-	id, err := c.ensureID("artistradio", "artistradio-1", "P Artist Radio 1")
+	id, err := c.ensureMix3("artistradio", "artistradio-1", "P Artist Radio 1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func TestQAAdminSeesOthersAndOnlyTouchesOwn(t *testing.T) {
 	}
 	// and a rename request must not rename foreign playlist either
 	c2 := New(s.call, "admin")
-	if _, err := c2.ensureID("artistradio", "artistradio-1", "Totally New"); err != nil {
+	if _, err := c2.ensureMix3("artistradio", "artistradio-1", "Totally New"); err != nil {
 		t.Fatal(err)
 	}
 	for _, l := range s.lists {
@@ -129,7 +129,7 @@ func TestQADuplicateMarkersMostRecentWinsOthersUntouched(t *testing.T) {
 		{ID: "mid", Name: "C", Owner: "bob", Comment: m, Changed: "2026-01-01T00:00:00Z"},
 		{ID: "nodate", Name: "D", Owner: "bob", Comment: m},
 	}}
-	id, err := New(s.call, "bob").ensureID("loved", "loved", "Wanted")
+	id, err := New(s.call, "bob").ensureMix3("loved", "loved", "Wanted")
 	if err != nil || id != "newest" {
 		t.Fatalf("id=%q err=%v", id, err)
 	}
@@ -149,7 +149,7 @@ func TestQAUnparseableTimesTieKeepsFirstListed(t *testing.T) {
 		{ID: "first", Name: "A", Owner: "bob", Comment: m, Changed: "garbage"},
 		{ID: "second", Name: "B", Owner: "bob", Comment: m, Changed: "not a time"},
 	}}
-	id, _ := New(s.call, "bob").ensureID("loved", "loved", "A")
+	id, _ := New(s.call, "bob").ensureMix3("loved", "loved", "A")
 	if id != "first" {
 		t.Errorf("got %s", id)
 	}
@@ -159,8 +159,9 @@ func TestQAUnparseableTimesTieKeepsFirstListed(t *testing.T) {
 		{ID: "dated", Name: "C", Owner: "bob", Comment: m, Changed: "2020-01-01T00:00:00Z"},
 	}}
 	// Neither carries the wanted name ("A"), so both sit in the same ranking
-	// tier and recency decides.
-	id, _ = New(s.call, "bob").ensureID("loved", "loved", "A")
+	// tier and recency decides. (Since the review fixes the wanted name wins
+	// first; that is covered by TestFindByMarkerPrefersTheWantedName.)
+	id, _ = New(s.call, "bob").ensureMix3("loved", "loved", "A")
 	if id != "dated" {
 		t.Errorf("got %s", id)
 	}
@@ -171,7 +172,7 @@ func TestQAMarkerWithDifferentKindSameSlotOrSameName(t *testing.T) {
 	s := &qaServer{lists: []Playlist{
 		{ID: "x", Name: "Punk Radio", Owner: "bob", Comment: qaMarker("genreradio", "genreradio-1")},
 	}}
-	id, _ := New(s.call, "bob").ensureID("artistradio", "genreradio-1", "Punk Radio")
+	id, _ := New(s.call, "bob").ensureMix3("artistradio", "genreradio-1", "Punk Radio")
 	if id == "x" {
 		t.Error("kind mismatch adopted by name")
 	}
@@ -179,10 +180,18 @@ func TestQAMarkerWithDifferentKindSameSlotOrSameName(t *testing.T) {
 	s = &qaServer{lists: []Playlist{
 		{ID: "x", Name: "Punk Radio", Owner: "bob", Comment: qaMarker("genreradio", "genreradio-2")},
 	}}
-	id, _ = New(s.call, "bob").ensureID("genreradio", "genreradio-1", "Punk Radio")
+	id, _ = New(s.call, "bob").ensureMix3("genreradio", "genreradio-1", "Punk Radio")
 	if id == "x" {
 		t.Error("slot mismatch adopted by name")
 	}
+	// Result: two playlists with the same name for the same owner.
+	count := 0
+	for _, l := range s.lists {
+		if l.Name == "Punk Radio" {
+			count++
+		}
+	}
+	t.Logf("after the second case the owner has %d playlists called Punk Radio (SURPRISE: legal per spec, confusing to a user)", count)
 }
 
 func TestQAGarbageComments(t *testing.T) {
@@ -192,7 +201,7 @@ func TestQAGarbageComments(t *testing.T) {
 		"\n\n\n", strings.Repeat("x", 100000), "nb1:loved:loved:d:m:30\r", "  nb1:loved:loved:d:m:30  ",
 	} {
 		s := &qaServer{lists: []Playlist{{ID: "g", Name: "Your Loved Songs", Owner: "bob", Comment: comment}}}
-		id, err := New(s.call, "bob").ensureID("loved", "loved", "Your Loved Songs")
+		id, err := New(s.call, "bob").ensureMix3("loved", "loved", "Your Loved Songs")
 		if err != nil || id != "g" {
 			t.Errorf("comment %q: id=%q err=%v (should adopt by name)", truncateForLog(comment), id, err)
 		}
@@ -210,9 +219,46 @@ func TestQAMarkerLineInsideALongerDescription(t *testing.T) {
 	// A user who edited the description in a client and kept the marker line.
 	c := "my notes\nnb1:loved:loved:2026-01-01:affinity:30\nmore notes"
 	s := &qaServer{lists: []Playlist{{ID: "e", Name: "Renamed By User", Owner: "bob", Comment: c}}}
-	id, _ := New(s.call, "bob").ensureID("loved", "loved", "Your Loved Songs")
+	id, _ := New(s.call, "bob").ensureMix3("loved", "loved", "Your Loved Songs")
 	if id != "e" {
 		t.Errorf("marker among user text not found: %s", id)
+	}
+}
+
+// What happens when a server truncates the comment to 255 characters and the
+// human sentence is long (long artist name)? The marker is the LAST line, so it
+// is the first thing lost.
+func TestQATruncatedCommentLosesMarker(t *testing.T) {
+	long := strings.Repeat("Z", 200)
+	human := "NaviBeat Mixes: built around " + long + " and what sits near it. Rotates weekly."
+	full := protocol.Format(human, protocol.Meta{Kind: "dailymix", Slot: "dailymix-1", Date: "2026-01-01", Mode: "affinity", Count: 30})
+	t.Logf("comment length %d runes", len([]rune(full)))
+	s := &qaServer{truncateAt: 255}
+	c := New(s.call, "bob")
+	id, err := c.ensureMix3("dailymix", "dailymix-1", "P "+long+" Mix")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.SetComment(id, full); err != nil {
+		t.Fatal(err)
+	}
+	// Next run: new client, fresh getPlaylists (comment now truncated).
+	c2 := New(s.call, "bob")
+	id2, err := c2.ensureMix3("dailymix", "dailymix-1", "P Other Artist Mix")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id2 != id {
+		t.Logf("HAZARD (only if the server enforces 255): marker lost to truncation; second run created %s instead of reusing %s (playlists now: %d)", id2, id, len(s.lists))
+	}
+}
+
+func TestQATypicalCommentFits255(t *testing.T) {
+	// Longest realistic: 100 char artist (name cut does not apply to the human text).
+	for _, n := range []int{10, 50, 100, 150} {
+		human := "NaviBeat Mixes: built around " + strings.Repeat("A", n) + " and what sits near it. Rotates weekly."
+		full := protocol.Format(human, protocol.Meta{Kind: "dailymix", Slot: "dailymix-3", Date: "2026-01-01", Mode: "fallback", Count: 200})
+		t.Logf("artist name %3d chars => comment %3d runes, fits 255: %v", n, len([]rune(full)), len([]rune(full)) <= 255)
 	}
 }
 
@@ -221,19 +267,22 @@ func TestQARenameFailureStillReturnsIDAndDoesNotCreate(t *testing.T) {
 		{ID: "a", Name: "Old", Owner: "bob", Comment: qaMarker("decade", "decade-1990")},
 	}}
 	c := New(s.call, "bob")
-	id, err := c.ensureID("decade", "decade-1990", "New")
+	id, err := c.ensureMix3("decade", "decade-1990", "New")
 	if err != nil || id != "a" {
 		t.Fatalf("id=%q err=%v", id, err)
 	}
 	if s.n("createPlaylist") != 0 {
 		t.Error("created on rename failure")
 	}
+	// a second call in the same run retries the rename (cache keeps old name)
+	c.ensureMix3("decade", "decade-1990", "New")
+	t.Logf("rename attempts in two EnsureMix calls: %d", s.n("updatePlaylist"))
 }
 
 func TestQAGetPlaylistsFailureCreatesNothing(t *testing.T) {
 	s := &qaServer{failList: true}
 	c := New(s.call, "bob")
-	id, err := c.ensureID("loved", "loved", "X")
+	id, err := c.ensureMix3("loved", "loved", "X")
 	if err == nil || id != "" {
 		t.Fatalf("id=%q err=%v", id, err)
 	}
@@ -242,14 +291,14 @@ func TestQAGetPlaylistsFailureCreatesNothing(t *testing.T) {
 	}
 	// A retry on the SAME client after failure must re-fetch, not use nil cache.
 	s.failList = false
-	if _, err := c.ensureID("loved", "loved", "X"); err != nil {
+	if _, err := c.ensureMix3("loved", "loved", "X"); err != nil {
 		t.Errorf("retry failed: %v", err)
 	}
 }
 
 func TestQACreateFailure(t *testing.T) {
 	s := &qaServer{failCreate: true}
-	if id, err := New(s.call, "bob").ensureID("loved", "loved", "X"); err == nil {
+	if id, err := New(s.call, "bob").ensureMix3("loved", "loved", "X"); err == nil {
 		t.Errorf("expected error, id=%q", id)
 	}
 }
@@ -260,7 +309,7 @@ func TestQASpecialCharactersInIDsAndNames(t *testing.T) {
 	s := &qaServer{lists: []Playlist{
 		{ID: weird, Name: "old", Owner: "bob", Comment: qaMarker("genreradio", "genreradio-1")},
 	}}
-	id, err := New(s.call, "bob").ensureID("genreradio", "genreradio-1", name)
+	id, err := New(s.call, "bob").ensureMix3("genreradio", "genreradio-1", name)
 	if err != nil || id != weird {
 		t.Fatalf("id=%q err=%v", id, err)
 	}
@@ -282,7 +331,7 @@ func TestQANeverCallsDelete(t *testing.T) {
 		{ID: "b", Name: "Old2", Owner: "bob", Comment: qaMarker("loved", "loved"), Changed: "2026-02-01T00:00:00Z"},
 	}}
 	c := New(s.call, "bob")
-	c.ensureID("loved", "loved", "New")
+	c.ensureMix3("loved", "loved", "New")
 	c.ReplaceTracks("b", []string{"1", "2", "3"})
 	c.SetComment("b", "x")
 	if s.deleteCalls != 0 {
@@ -293,8 +342,32 @@ func TestQANeverCallsDelete(t *testing.T) {
 	}
 }
 
-// ensureID is EnsureMix without the created flag, which these tests do not need.
-func (c *Client) ensureID(kind, slot, name string) (string, error) {
-	id, _, err := c.EnsureMix(kind, slot, name)
+func TestQAAdoptionByNameTakesFirstOfSeveralUnmarked(t *testing.T) {
+	s := &qaServer{lists: []Playlist{
+		{ID: "u1", Name: "Daily Mix 1", Owner: "bob", Changed: "2020-01-01T00:00:00Z"},
+		{ID: "u2", Name: "Daily Mix 1", Owner: "bob", Changed: "2026-01-01T00:00:00Z"},
+	}}
+	id, _ := New(s.call, "bob").ensureMix3("dailymix", "dailymix-1", "Daily Mix 1")
+	t.Logf("two unmarked same-name playlists: adopted %s (spec S1-5 only covers markers; name fallback ignores recency)", id)
+}
+
+func TestQAAdoptionClobbersUserPlaylistThatMatchesATemplatedName(t *testing.T) {
+	// With templates enabled the mix name is "This is Billy Talent". A playlist the
+	// user made by hand with exactly that name (no marker) is adopted: its tracks
+	// are replaced.
+	s := &qaServer{lists: []Playlist{
+		{ID: "mine", Name: "P This is Billy Talent", Owner: "bob", Comment: "my favourite BT songs"},
+	}}
+	id, _ := New(s.call, "bob").ensureMix3("artistradio", "artistradio-1", "P This is Billy Talent")
+	if id == "mine" {
+		t.Log("SURPRISE: a hand made playlist with the same name as a templated mix is adopted (and later overwritten)")
+	}
+}
+
+// ensureMix3 keeps the QA tests written against the three argument EnsureMix.
+// The legacy name is the wanted name, which reproduces the old behaviour of
+// adopting an unmarked playlist by exact name.
+func (c *Client) ensureMix3(kind, slot, name string) (string, error) {
+	id, _, err := c.EnsureMix(kind, slot, name, name)
 	return id, err
 }
