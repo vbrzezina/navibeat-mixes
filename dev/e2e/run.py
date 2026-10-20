@@ -312,6 +312,20 @@ def main():
           f"copy={c and (c['name'], c['n'])} original={orig and (orig['name'], orig['n'])}")
     call("updatePlaylist", playlistId=copy, comment="")
 
+    # ---- the case from the review of the upstream pull request: the user copies a mix
+    # and the copy keeps the description, the copy is touched last, then the prefix
+    # changes so that neither playlist has the wanted name.
+    ok2, ov2 = byslot(d, "artistradio:artistradio-1")
+    copy2 = call("createPlaylist", name="Review case copy", songId=[s["id"] for s in songs[:3]])["playlist"]["id"]
+    call("updatePlaylist", playlistId=copy2, comment=(ov2 or {}).get("comment", ""))
+    regen(dict(cfg, prefix="ZZ "))
+    d = snap()
+    c2, o2 = d.get(copy2), d.get(ok_)
+    check("a copy that keeps the description is not taken over after a prefix change",
+          bool(c2 and c2["name"] == "Review case copy" and c2["n"] == 3 and o2 and o2["name"].startswith("ZZ ") and o2["n"] > 0),
+          f"copy={c2 and (c2['name'], c2['n'])} original={o2 and (o2['name'], o2['n'])}")
+    call("updatePlaylist", playlistId=copy2, comment="")
+
     # ---- 5. subject rotation by changing listening
     before = {k: v["name"] for k, v in mine(snap()).items() if v["slot"]}
     tracks = by_artist.get("Zed Zero", [])[:8] + by_artist.get("Blue Quartet", [])[:8]
