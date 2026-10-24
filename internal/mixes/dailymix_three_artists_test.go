@@ -121,3 +121,87 @@ func TestDailyMixPicksRelatedArtistsByGenresSharedFirst(t *testing.T) {
 		t.Errorf("the fourth artist has %d tracks, wanted at most the cap of 3: %v", n['r'], n)
 	}
 }
+
+// The description names the artists the listener will hear, in the spelling of
+// their tags, anchor first.
+func TestDailyMixReportsItsFeaturedArtists(t *testing.T) {
+	got := BuildDailyMix(threeArtistLibrary(), []string{"Anchor"}, 0, 30, 3).Featured
+	want := []string{"Anchor", "Second", "Third"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Errorf("Featured = %v, want %v", got, want)
+	}
+}
+
+// A related artist that has no track in the mix is not named.
+func TestDailyMixDoesNotNameAnArtistItDoesNotPlay(t *testing.T) {
+	// At a mix size of 3 the share is 1 track each, then the budget is spent
+	// before the second related artist is reached.
+	sel := BuildDailyMix(threeArtistLibrary(), []string{"Anchor"}, 0, 2, 3)
+	if len(sel.TrackIDs) != 2 {
+		t.Fatalf("selected %d tracks, wanted 2: %v", len(sel.TrackIDs), sel.TrackIDs)
+	}
+	for _, name := range sel.Featured {
+		played := false
+		for _, id := range sel.TrackIDs {
+			if strings.EqualFold(name, map[string]string{"x": "Anchor", "y": "Second", "z": "Third"}[id[:1]]) {
+				played = true
+			}
+		}
+		if !played {
+			t.Errorf("%q is named but has no track in %v", name, sel.TrackIDs)
+		}
+	}
+}
+
+func TestFeaturedArtistsUseTheTagSpelling(t *testing.T) {
+	tracks := []Track{
+		{ID: "a", Artist: " Muse "}, {ID: "b", Artist: "Sick Puppies"}, {ID: "c", Artist: "Sick Puppies"},
+	}
+	got := featuredArtists(tracks, "Muse", []string{"sick puppies"}, []string{"a", "b"})
+	if strings.Join(got, "|") != "Muse|Sick Puppies" {
+		t.Errorf("featuredArtists = %v", got)
+	}
+}
+
+func distinctFeaturedLibrary() []Track {
+	tracks := threeArtistLibrary()
+	for i := 0; i < 20; i++ {
+		tracks = append(tracks, Track{ID: "v" + strconv.Itoa(i), Artist: "Fifth", Genre: "Techno", PlayCount: 8})
+	}
+	return tracks
+}
+
+// Related artists already used by another Daily Mix are skipped while the
+// library has others.
+func TestDailyMixAvoidsFeaturedArtistsOfOtherMixes(t *testing.T) {
+	avoid := map[string]bool{"second": true, "third": true}
+	got := BuildDailyMixAvoiding(distinctFeaturedLibrary(), []string{"Anchor"}, 0, 30, 3, avoid).Featured
+	want := []string{"Anchor", "Fourth", "Fifth"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Errorf("Featured = %v, want %v", got, want)
+	}
+}
+
+// With no other artist to take, an avoided one is used rather than leaving the
+// mix with fewer than three featured artists.
+func TestDailyMixFallsBackToAvoidedArtists(t *testing.T) {
+	avoid := map[string]bool{"second": true, "third": true, "fourth": true}
+	got := BuildDailyMixAvoiding(threeArtistLibrary(), []string{"Anchor"}, 0, 30, 3, avoid).Featured
+	if len(got) != 3 {
+		t.Errorf("Featured = %v, want three artists", got)
+	}
+}
+
+// One artist under two spellings is named the way most of its tracks are tagged.
+func TestFeaturedArtistsUseTheCommonestSpelling(t *testing.T) {
+	tracks := []Track{
+		{ID: "a", Artist: "SICK PUPPIES"}, {ID: "b", Artist: "Sick Puppies"},
+		{ID: "c", Artist: "Sick Puppies"}, {ID: "d", Artist: "Sick Puppies"},
+		{ID: "e", Artist: "Anchor"}, {ID: "f", Artist: "ANCHOR"}, {ID: "g", Artist: "anchor"},
+	}
+	got := featuredArtists(tracks, "ANCHOR", []string{"sick puppies"}, []string{"a", "b"})
+	// A tie between spellings goes to the one that sorts first.
+	if strings.Join(got, "|") != "ANCHOR|Sick Puppies" {
+		t.Errorf("featuredArtists = %v, want ANCHOR (three-way tie, sorts first) and Sick Puppies", got)
+	}
+}

@@ -613,10 +613,28 @@ func generateForUser(cfg config.Config, username string, ledger *resume.Ledger, 
 			naming.Sentence("artistradio", a),
 			mixes.BuildForArtist(tracks, a, cfg.MixSize))
 	}
-	for i := 0; i < 3 && i < len(artists); i++ {
+	// The Daily Mixes of one day do not share featured artists: the other
+	// mixes' anchors and the neighbours already chosen are avoided while the
+	// library has enough other artists.
+	dailies := min(3, len(artists))
+	avoid := map[string]bool{}
+	for i := 0; i < dailies; i++ {
+		avoid[strings.ToLower(strings.TrimSpace(artists[i]))] = true
+	}
+	for i := 0; i < dailies; i++ {
+		own := strings.ToLower(strings.TrimSpace(artists[i]))
+		avoidHere := make(map[string]bool, len(avoid))
+		for k := range avoid {
+			if k != own {
+				avoidHere[k] = true
+			}
+		}
+		sel := mixes.BuildDailyMixAvoiding(tracks, artists, i, cfg.MixSize, cfg.MaxPerArtist, avoidHere)
+		for _, f := range sel.Featured {
+			avoid[strings.ToLower(strings.TrimSpace(f))] = true
+		}
 		add("dailymix", "Daily Mix "+strconv.Itoa(i+1), mixes.NumberedSlot(mixes.DailyMix, i+1),
-			naming.Sentence("dailymix", artists[i]), "dailymix",
-			mixes.BuildDailyMix(tracks, artists, i, cfg.MixSize, cfg.MaxPerArtist))
+			naming.DailySentence(artists[i], sel.Featured), "dailymix", sel)
 	}
 	// Same floor and same reason as the genre and artist pools: a decade that
 	// cannot fill a mix must not take a rotation slot it will then leave empty.
