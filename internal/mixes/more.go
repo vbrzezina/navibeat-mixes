@@ -568,6 +568,16 @@ func BuildForDecade(tracks []Track, decade, size, maxPerArtist int) Selection {
 // `index` selects which anchor, so "Daily Mix 2" is a stable identity even
 // though its contents change.
 func BuildDailyMix(tracks []Track, anchors []string, index, size, maxPerArtist int) Selection {
+	return BuildDailyMixAvoiding(tracks, anchors, index, size, maxPerArtist, nil)
+}
+
+// BuildDailyMixAvoiding is BuildDailyMix where the related artists are chosen
+// from outside `avoid` (lower-cased, trimmed artist names) when the library has
+// enough of them, so the Daily Mixes of one day do not all feature the same
+// neighbour. When there are not enough others, the missing places are filled
+// from the avoided artists, closest first: a mix with three featured artists
+// that repeat is better than a mix with fewer.
+func BuildDailyMixAvoiding(tracks []Track, anchors []string, index, size, maxPerArtist int, avoid map[string]bool) Selection {
 	if index < 0 || index >= len(anchors) {
 		return Selection{Slot: DailyMix, Mode: ModeFallback}
 	}
@@ -602,7 +612,7 @@ func BuildDailyMix(tracks []Track, anchors []string, index, size, maxPerArtist i
 		scored = append(scored, scoredTrack{track: t, score: s})
 	}
 	sortScored(scored)
-	related := relatedArtists(tracks, anchor, genres, dailyMixFeatured-1)
+	related := relatedArtistsAvoiding(tracks, anchor, genres, dailyMixFeatured-1, avoid)
 	ids := pickDailyMix(scored, anchor, related, size, maxPerArtist)
 	return Selection{
 		Slot:     DailyMix,
@@ -648,6 +658,34 @@ func featuredArtists(tracks []Track, anchor string, related, ids []string) []str
 // Genre is the only similarity the plugin has (BuildForArtist says the same),
 // so "related" means exactly this: same genres, counted per genre shared.
 func relatedArtists(tracks []Track, anchor string, genres map[string]bool, n int) []string {
+	return relatedArtistsAvoiding(tracks, anchor, genres, n, nil)
+}
+
+// relatedArtistsAvoiding is relatedArtists that prefers artists outside avoid
+// and tops up from the avoided ones, in the same ranking, when it runs short.
+func relatedArtistsAvoiding(tracks []Track, anchor string, genres map[string]bool, n int, avoid map[string]bool) []string {
+	if len(avoid) == 0 {
+		return rankedRelated(tracks, anchor, genres, n)
+	}
+	all := rankedRelated(tracks, anchor, genres, len(tracks))
+	var out, skipped []string
+	for _, k := range all {
+		if avoid[k] {
+			skipped = append(skipped, k)
+		} else if len(out) < n {
+			out = append(out, k)
+		}
+	}
+	for _, k := range skipped {
+		if len(out) >= n {
+			break
+		}
+		out = append(out, k)
+	}
+	return out
+}
+
+func rankedRelated(tracks []Track, anchor string, genres map[string]bool, n int) []string {
 	if n <= 0 || len(genres) == 0 {
 		return nil
 	}

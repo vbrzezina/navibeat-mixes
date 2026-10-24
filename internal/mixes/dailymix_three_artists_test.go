@@ -162,3 +162,32 @@ func TestFeaturedArtistsUseTheTagSpelling(t *testing.T) {
 		t.Errorf("featuredArtists = %v", got)
 	}
 }
+
+func distinctFeaturedLibrary() []Track {
+	tracks := threeArtistLibrary()
+	for i := 0; i < 20; i++ {
+		tracks = append(tracks, Track{ID: "v" + strconv.Itoa(i), Artist: "Fifth", Genre: "Techno", PlayCount: 8})
+	}
+	return tracks
+}
+
+// Related artists already used by another Daily Mix are skipped while the
+// library has others.
+func TestDailyMixAvoidsFeaturedArtistsOfOtherMixes(t *testing.T) {
+	avoid := map[string]bool{"second": true, "third": true}
+	got := BuildDailyMixAvoiding(distinctFeaturedLibrary(), []string{"Anchor"}, 0, 30, 3, avoid).Featured
+	want := []string{"Anchor", "Fourth", "Fifth"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Errorf("Featured = %v, want %v", got, want)
+	}
+}
+
+// With no other artist to take, an avoided one is used rather than leaving the
+// mix with fewer than three featured artists.
+func TestDailyMixFallsBackToAvoidedArtists(t *testing.T) {
+	avoid := map[string]bool{"second": true, "third": true, "fourth": true}
+	got := BuildDailyMixAvoiding(threeArtistLibrary(), []string{"Anchor"}, 0, 30, 3, avoid).Featured
+	if len(got) != 3 {
+		t.Errorf("Featured = %v, want three artists", got)
+	}
+}
