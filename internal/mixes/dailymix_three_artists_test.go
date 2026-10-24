@@ -155,10 +155,10 @@ func TestDailyMixDoesNotNameAnArtistItDoesNotPlay(t *testing.T) {
 
 func TestFeaturedArtistsUseTheTagSpelling(t *testing.T) {
 	tracks := []Track{
-		{ID: "a", Artist: " Muse "}, {ID: "b", Artist: "SICK PUPPIES"}, {ID: "c", Artist: "sick puppies"},
+		{ID: "a", Artist: " Muse "}, {ID: "b", Artist: "Sick Puppies"}, {ID: "c", Artist: "Sick Puppies"},
 	}
 	got := featuredArtists(tracks, "Muse", []string{"sick puppies"}, []string{"a", "b"})
-	if strings.Join(got, "|") != "Muse|SICK PUPPIES" {
+	if strings.Join(got, "|") != "Muse|Sick Puppies" {
 		t.Errorf("featuredArtists = %v", got)
 	}
 }
@@ -189,5 +189,19 @@ func TestDailyMixFallsBackToAvoidedArtists(t *testing.T) {
 	got := BuildDailyMixAvoiding(threeArtistLibrary(), []string{"Anchor"}, 0, 30, 3, avoid).Featured
 	if len(got) != 3 {
 		t.Errorf("Featured = %v, want three artists", got)
+	}
+}
+
+// One artist under two spellings is named the way most of its tracks are tagged.
+func TestFeaturedArtistsUseTheCommonestSpelling(t *testing.T) {
+	tracks := []Track{
+		{ID: "a", Artist: "SICK PUPPIES"}, {ID: "b", Artist: "Sick Puppies"},
+		{ID: "c", Artist: "Sick Puppies"}, {ID: "d", Artist: "Sick Puppies"},
+		{ID: "e", Artist: "Anchor"}, {ID: "f", Artist: "ANCHOR"}, {ID: "g", Artist: "anchor"},
+	}
+	got := featuredArtists(tracks, "ANCHOR", []string{"sick puppies"}, []string{"a", "b"})
+	// A tie between spellings goes to the one that sorts first.
+	if strings.Join(got, "|") != "ANCHOR|Sick Puppies" {
+		t.Errorf("featuredArtists = %v, want ANCHOR (three-way tie, sorts first) and Sick Puppies", got)
 	}
 }
